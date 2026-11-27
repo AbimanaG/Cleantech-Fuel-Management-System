@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fuel Reconciliation — Excel Format · Cleantech</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<style>
+:root{--ink:#1b2430;--paper:#f6f4ee;--panel:#fff;--line:#d9d4c7;--accent:#2c5f4f;--accent-ink:#eef5f1;--amber:#a9631a;--amber-bg:#fbeee0;--red:#a4342a;--red-bg:#fbe9e6;--green:#2c6b3f;--green-bg:#e7f2e9;--muted:#7a8390}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;background:var(--paper);color:var(--ink);line-height:1.4}
+header{padding:20px 28px 12px;border-bottom:1px solid var(--line);background:var(--panel)}
+header h1{margin:0 0 4px;font-size:19px}
+header p{margin:0;color:#5a6470;font-size:12.5px;max-width:1100px}
+main{padding:16px 28px 80px;max-width:1600px;margin:0 auto}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:6px;margin-bottom:14px;padding:14px}
+.card h2{margin:0 0 10px;font-size:14px}
+.file-btn{display:inline-flex;align-items:center;padding:8px 14px;border:1px solid var(--accent);border-radius:5px;cursor:pointer;font-weight:700;font-size:13px;background:var(--accent);color:var(--accent-ink)}
+.file-btn:hover{background:#254f42}
+button{font-family:inherit;font-size:12.5px;font-weight:600;border-radius:5px;border:1px solid transparent;padding:7px 13px;cursor:pointer}
+button.primary{background:var(--accent);color:var(--accent-ink)}
+button.ghost{background:transparent;border-color:var(--line);color:var(--ink)}
+button.ghost:hover{background:#efece2}
+button.tog{background:#fff;border:1px solid var(--line)}
+button.tog.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+#upStatus{font-size:12px;color:var(--muted);margin-left:10px}
+.hint{font-size:11.5px;color:var(--muted)}
+.chk{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:#3c4652}
+.alert{padding:9px 13px;border-radius:6px;font-size:12.5px;margin-bottom:9px}
+.alert.warn{background:var(--amber-bg);color:var(--amber);border:1px solid #f0c79a}
+#tools{display:none;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0 12px}
+table.chk{border-collapse:collapse;font-size:12px;margin-top:10px;width:100%}
+table.chk th,table.chk td{border-bottom:1px solid #eeece3;padding:4px 8px;text-align:left}
+table.chk th{background:#efece2}
+td.okc{color:var(--green);font-weight:700} td.badc{color:var(--red);font-weight:700}
+td.warnrow{color:var(--amber);font-size:11.5px}
+</style>
+<style id="repCss">
+.report-section{margin-bottom:24px}
+.sec-title{font-size:13px;font-weight:700;margin:0 0 6px;padding:7px 12px;background:#e9e5d8;border-radius:5px;border-left:4px solid var(--accent)}
+.sec-sub{font-size:11.5px;color:#5a6470;margin:0 0 8px 4px}
+table.simple{border-collapse:collapse;width:100%;font-size:12px;table-layout:auto}
+table.simple th,table.simple td{border:1px solid #bdb8aa;padding:4px 6px;text-align:left;vertical-align:top}
+table.simple th{background:#efece2;font-weight:700}
+table.simple td.num,table.simple th.num{text-align:right;white-space:nowrap}
+table.simple td.none{color:#94a3b8;padding:12px} table.across th.vh{white-space:nowrap;font-size:10.5px} table.across td.num{white-space:nowrap}
+.small{font-size:10.5px;color:#5a6470;font-weight:400}
+tr.subtotal-row td{background:#f2f0e6;font-weight:700}
+tr.grandtotal-row td{background:#dfe9e2;font-weight:700}
+tr.grp td{background:#f0eee2;font-weight:700;color:#7a3d0e;border-left:3px solid #a9631a}
+table.mx td .cn{margin-bottom:3px;white-space:normal}
+table.mx td .cn:last-child{margin-bottom:0}
+table.mx.across th.vh{white-space:nowrap;font-size:10.5px}
+tr.gsub th{background:#f7f5ee;font-weight:400}
+.rk{display:inline-block;font-size:9.5px;font-weight:700;padding:0 5px;border-radius:8px;background:#e7f2e9;color:#2c6b3f}
+.rk.amber{background:#fbeee0;color:#a9631a}.rk.red{background:#fbe9e6;color:#a4342a}
+tr.unu td{background:#fbeee0} table.simple td.none{color:#94a3b8;padding:12px}</style>
+</head><body>
+<header><h1>Fuel Reconciliation — Excel Format</h1>
+<p>Upload the daily “Fuel Card vs GPS Reconciliation” PDFs (any number of days). The report is rebuilt in the GPS.xlsx layout: 1 Mobitel Bill Summary · 2 Filling variance +1.5 · 4 Fuel Pump Time Variance · 3 GPS Unavailable &amp; Offline · 5 Abnormal Highlights. Download as Excel or PDF.</p></header>
+<main>
+<div class="card"><h2>Step 1 — Upload daily report PDFs (multi-select)</h2>
+<label class="file-btn">📂 Choose daily report PDFs<input type="file" id="upFile" accept="application/pdf,.pdf" multiple style="display:none"></label>
+<span id="upStatus">No file selected</span><div id="loaded"></div></div>
+<div id="tools"><button class="primary" onclick="downloadXlsx()">⬇ Download Excel (.xlsx)</button><button class="primary" onclick="downloadPdf()">⬇ Download PDF</button><button class="ghost" onclick="clearAll()">Clear all</button></div>
+<div id="reportArea"></div></main>
+<script>
+/* ===== Daily reconciliation report parser (reads the PDFs exported by the daily Fuel Card vs GPS tool) ===== */
+const HDR_STRIP = [
+  /Card Date & Time GPS Date & Time Vehicle Vehicle Type Shift Area Location\(s\) Pumped \(Card\) Pumped \(GPS\) Variance Vari % Status Note/g,
+  /Vehicle Vehicle Type Card Date & Time GPS Date & Time Diff \(Mins\) GPS Location Risk/g,
+  /Category Vehicle Observed Issue Fuel Impact \(L\) Action/g,
+  /Page \d+ of \d+/g
+];
+const numOf = v => { v = String(v==null?'':v).replace(/,/g,'').trim(); if (v===''||v==='-') return 0; const n = parseFloat(v); return isFinite(n) ? n : 0; };
+const DT = '\\d{4}-\\d{2}-\\d{2}';
+
+function splitSections(t){
+  const defs = [
+    ['s1', /1\. Unusual filling variance \((\d+)\)/],
+    ['s2', /2\. More than ±1\.5 L Variance[^()]{0,60}\((\d+)\)/],
+    ['s3', /3\. GPS Unavailable & Offline Vehicle List \((\d+)\)/],
+    ['s4', /4\. Fuel Pump Time Variance[^()]{0,80}\((\d+)\)/],
+    ['s5', /5\. On GPS \([^)]*\), not on card \((\d+)\)/],
+    ['s51',/5\.1 GPS fills not at [^,]*, not on card \((\d+)\)/],
+    ['s6', /6\. Variance within [^()]{0,30}\((\d+)\)/],
+    ['s7', /7\. Abnormal Highlights & Recommendations \((\d+)\)/],
+    ['gt', /GRAND TOTAL /]
+  ];
+  const found = [];
+  defs.forEach(([k, re]) => {
+    const m = re.exec(t);
+    if (m) found.push({ k, start: m.index, bodyStart: m.index + m[0].length, count: m[1] !== undefined ? +m[1] : null });
+  });
+  found.sort((a,b) => a.start - b.start);
+  const out = {};
+  found.forEach((f, i) => { out[f.k] = { count: f.count, body: t.slice(f.bodyStart, i+1 < found.length ? found[i+1].start : t.length) }; });
+  return out;
+}
+
+function parseMatched(seg){
+  const re = new RegExp('('+DT+') (\\d{2}:\\d{2}) ((?:'+DT+' \\d{2}:\\d{2} )+)(\\S+) (.+?) ([\\d,]+\\.\\d{2}) ([\\d,]+\\.\\d{2}) ([+-][\\d,]+\\.\\d{2}) ([+-][\\d.,]+)% (UNUSUAL|Mismatch|OK) (.*?)(?= '+DT+' \\d{2}:\\d{2} '+DT+'|Subtotal|$)','g');
+  const rows = []; let m;
+  while ((m = re.exec(seg))) {
+    const mid = m[5].match(/^(.*?) (-|[A-Z]) (\S+) ?(.*)$/);
+    rows.push({
+      date: m[1], cardTime: m[2], gpsTimes: m[3].trim().split(/ (?=\d{4}-)/).map(x => x.split(' ')[1]).join(', '),
+      vehicle: m[4], type: mid ? mid[1] : m[5], area: mid ? mid[3] : '',
+      cardL: numOf(m[6]), gpsL: numOf(m[7]), variance: numOf(m[8]), pct: numOf(m[9]), status: m[10], note: m[11].trim()
+    });
+  }
+  return rows;
+}
+
+function parseCardOnly(body){
+  const subRe = /3\.(\d) ([^()]+?) \((\d+)\)/g;
+  const marks = []; let m;
+  while ((m = subRe.exec(body))) marks.push({ idx: m.index, end: subRe.lastIndex, label: m[2].split('—')[0].trim(), count: +m[3] });
+  const rows = [];
+  const rowRe = new RegExp('('+DT+')(?: (\\d{2}:\\d{2}))? - (.+?) ([\\d,]+\\.\\d{2}) - - - No GPS record (.*?)(?= '+DT+'(?: \\d{2}:\\d{2})? - |Subtotal|$)','g');
+  marks.forEach((mk, i) => {
+    const part = body.slice(mk.end, i+1 < marks.length ? marks[i+1].idx : body.length);
+    let r;
+    rowRe.lastIndex = 0;
+    while ((r = rowRe.exec(part))) {
+      let mid = r[3].replace(/ -$/, '').trim(), vehicle, rest;
+      const cm = mid.match(/^(Common\s*-\s*\w+)\s*(.*)$/);
+      if (cm) { vehicle = cm[1].replace(/\s*-\s*/, ' - '); rest = cm[2]; }
+      else { const p = mid.split(' '); vehicle = p.shift(); rest = p.join(' '); }
+      const tk = rest.split(' ');
+      const area = tk.length ? tk.pop() : '';
+      const shift = tk.length ? tk.pop() : '';
+      rows.push({ date: r[1], cardTime: r[2] || '', vehicle, type: tk.join(' '), shift, area, cardL: numOf(r[4]), note: r[5].trim(), category: mk.label });
+    }
+  });
+  return { rows, subCounts: marks.map(x => ({ label: x.label, count: x.count })) };
+}
+
+function parseTime(body){
+  body = body.replace(/^.*?Critical above 240 min\./, '');
+  const re = new RegExp('(\\S+) (.+?) ('+DT+') (\\d{2}:\\d{2}) ('+DT+') (\\d{2}:\\d{2}) (\\d+) (.+?) (Low|High|Critical)(?= |$)','g');
+  const rows = []; let m;
+  while ((m = re.exec(body))) rows.push({ vehicle: m[1], type: m[2], date: m[3], cardTime: m[4], gpsTime: m[6], mins: +m[7], location: m[8], risk: m[9] });
+  return rows;
+}
+
+const ABN_CATS = ['Multiple same-day fillings', 'Unusual filling variance'];
+function parseAbnormal(body){
+  const pos = [];
+  ABN_CATS.forEach(c => { let i = -1; while ((i = body.indexOf(c + ' ', i + 1)) >= 0) pos.push({ i, c }); });
+  pos.sort((a,b) => a.i - b.i);
+  const rows = [];
+  if (!pos.length) {
+    const txt = body.replace(/Subtotal.*$/, '').trim();
+    if (txt) rows.push({ cat: 'Other', vehicle: '-', issue: txt, litres: 0, action: '' });
+    return rows;
+  }
+  pos.forEach((p, k) => {
+    const chunk = body.slice(p.i + p.c.length + 1, k+1 < pos.length ? pos[k+1].i : body.length).trim();
+    const m = chunk.match(/^(\S+) (.*) ([\d,]+\.\d{2}) ((?:(?![\d,]+\.\d{2}).)*)$/);
+    if (m) rows.push({ cat: p.c, vehicle: m[1], issue: m[2].replace(/ on \d{4}-\d{2}-\d{2}:/, ':'), litres: numOf(m[3]), action: m[4].trim() });
+    else rows.push({ cat: p.c, vehicle: chunk.split(' ')[0] || '-', issue: chunk, litres: 0, action: '' });
+  });
+  return rows;
+}
+
+function parseSummary(t){
+  const m = t.match(new RegExp('Pumped Ltr Amount ('+DT+') Diesel (\\S+) (\\S+) Petrol (\\S+) (\\S+) Super Diesel (\\S+) (\\S+)(?: Other (\\S+) (\\S+))? Total (\\S+) (\\S+)'));
+  if (!m) return null;
+  return { date: m[1], diesel: numOf(m[2]), dieselAmt: numOf(m[3]), petrol: numOf(m[4]), petrolAmt: numOf(m[5]), superD: numOf(m[6]), superAmt: numOf(m[7]),
+           other: numOf(m[8]), otherAmt: numOf(m[9]), total: numOf(m[10]), totalAmt: numOf(m[11]) };
+}
+
+function parseDailyReport(rawText, fileName){
+  let t = String(rawText || '').replace(/\s+/g, ' ');
+  HDR_STRIP.forEach(re => { t = t.replace(re, ' '); });
+  t = t.replace(/\s+/g, ' ');
+  const dm = t.match(new RegExp('DATE : ('+DT+')'));
+  const sum = parseSummary(t);
+  const date = dm ? dm[1] : (sum ? sum.date : null);
+  if (!date) return { error: 'Not a daily reconciliation report (no "DATE :" line found)', fileName };
+  const sec = splitSections(t);
+  const day = { date, fileName, summary: sum, checks: [], warnings: [] };
+  const chk = (label, got, want) => day.checks.push({ label, got, want, ok: want == null ? true : got === want });
+  const rowsOf = k => sec[k] ? parseMatched(sec[k].body) : [];
+  day.unusual = rowsOf('s1'); day.flagged = rowsOf('s2'); day.ok = rowsOf('s6');
+  const co = sec.s3 ? parseCardOnly(sec.s3.body) : { rows: [], subCounts: [] };
+  day.cardOnly = co.rows;
+  day.timeVar = sec.s4 ? parseTime(sec.s4.body) : [];
+  day.abnormal = sec.s7 ? parseAbnormal(sec.s7.body) : [];
+  day.counts = { s5: sec.s5 ? sec.s5.count : null, s51: sec.s51 ? sec.s51.count : null, ok: sec.s6 ? sec.s6.count : null };
+  if (sec.s1) chk('Unusual filling variance', day.unusual.length, sec.s1.count); else day.warnings.push('Section 1 not found');
+  if (sec.s2) chk('More than ±1.5 L variance', day.flagged.length, sec.s2.count); else day.warnings.push('Section 2 not found');
+  if (sec.s3) chk('GPS unavailable & offline', day.cardOnly.length, sec.s3.count); else day.warnings.push('Section 3 not found');
+  if (sec.s4) chk('Time variance > 5 min', day.timeVar.length, sec.s4.count); else day.warnings.push('Section 4 not found');
+  if (sec.s6) chk('Variance OK', day.ok.length, sec.s6.count);
+  if (sec.s7) chk('Abnormal highlights', day.abnormal.length, sec.s7.count);
+  else day.warnings.push('Section 7 (Abnormal highlights) is missing from this PDF' + (/7\. Abnormal highlights (\d+)/.test(t) ? ` — its summary lists ${t.match(/7\. Abnormal highlights (\d+)/)[1]}` : ''));
+  const gt = t.match(/GRAND TOTAL ([\d,.]+) ([\d,.]+) ([+-][\d,.]+) ([+-][\d.]+)%/);
+  day.grand = gt ? { cardL: numOf(gt[1]), gpsL: numOf(gt[2]), variance: numOf(gt[3]), pct: numOf(gt[4]) } : null;
+  if (!day.summary) day.warnings.push('Summary table (fuel type totals) not found');
+  day.abnormalMissing = !sec.s7;
+  return day;
+}
+if (typeof module !== 'undefined') module.exports = { parseDailyReport };
+
+
+/* If a daily PDF has no section 7 (cut off when exported), rebuild it from the other sections */
+function deriveAbnormal(day, opts){
+  opts = opts || {};
+  const norm = v => String(v||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+  const all = []
+    .concat(day.unusual.map(r => ({ v: r.vehicle, t: r.cardTime, l: r.cardL })))
+    .concat(day.flagged.map(r => ({ v: r.vehicle, t: r.cardTime, l: r.cardL })))
+    .concat(day.ok.map(r => ({ v: r.vehicle, t: r.cardTime, l: r.cardL })))
+    .concat(day.cardOnly.map(r => ({ v: r.vehicle, t: r.cardTime, l: r.cardL })));
+  const g = {};
+  all.forEach(e => { (g[norm(e.v)] = g[norm(e.v)] || []).push(e); });
+  const out = [];
+  if (opts.multiples) Object.values(g).filter(a => a.length > 1).forEach(a => {
+    a.sort((x,y) => (x.t||'').localeCompare(y.t||''));
+    out.push({ cat: 'Multiple same-day fillings', vehicle: a[0].v, derived: true,
+      issue: `Billed ${a.length} times: ` + a.map(e => `${+e.l}L${e.t ? ' @ ' + e.t : ''}`).join(', '),
+      litres: a.reduce((s,e) => s + e.l, 0), action: 'Verify pump receipts / filling station terminal logs' });
+  });
+  day.unusual.forEach(r => {
+    const n = (r.note.match(/(\d+) fill/) || [0, 1])[1];
+    out.push({ cat: 'Unusual filling variance', vehicle: r.vehicle, derived: true,
+      issue: `Card ${r.cardL.toFixed(2)} L vs GPS ${r.gpsL.toFixed(2)} L (${n} fill(s))`, litres: r.cardL, action: 'Review remark and supporting documents' });
+  });
+  return out;
+}
+if (typeof module !== 'undefined') module.exports.deriveAbnormal = deriveAbnormal;
+
+/* ===================== CORE: model, HTML render, Excel build (GPS.xlsx layout) ===================== */
+const f2 = n => (+n).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+const f2s = n => (n>0?'+':'') + f2(n);
+const escH = s => (s==null?'':String(s)).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const sumOf = (a, f) => a.reduce((s, r) => s + f(r), 0);
+const normV = v => String(v||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+
+function buildModel(days, opts){
+  opts = opts || {};
+  const ds = Object.keys(days).sort();
+  const m = { dates: ds, s1: [], s2: [], s3: [], s4: [], s5: [], notes: [] };
+  ds.forEach(d => {
+    const x = days[d], s = x.summary;
+    if (s) m.s1.push({ date: d, diesel: s.diesel, petrol: s.petrol, superD: s.superD, other: s.other||0, total: s.total, amt: s.totalAmt });
+    else m.s1.push({ date: d, diesel: 0, petrol: 0, superD: 0, other: 0, total: 0, amt: 0, missing: true });
+    const mk = (r, unusual) => ({ date: d, time: r.cardTime, vehicle: r.vehicle, type: r.type, cardL: r.cardL, gpsL: r.gpsL, unusual });
+    const two = x.unusual.map(r => mk(r, true)).concat(x.flagged.map(r => mk(r, false)));
+    two.sort((a,b) => a.time.localeCompare(b.time));
+    m.s2.push(...two);
+    x.timeVar.forEach(r => m.s4.push({ date: d, vehicle: r.vehicle, cardDT: d + ' ' + r.cardTime, gpsDT: r.date + ' ' + r.gpsTime, mins: r.mins, risk: r.risk }));
+    x.cardOnly.forEach(r => m.s3.push({ date: d, vehicle: r.vehicle, dt: d + (r.cardTime ? ' ' + r.cardTime : ''), litres: r.cardL, category: r.category }));
+    // abnormal: use report section 7, or rebuild from unusual entries if the PDF lacks it
+    const ab = x.abnormalMissing ? deriveAbnormal(x, { multiples: !!opts.multiples }) : x.abnormal;
+    if (x.abnormalMissing) m.notes.push(d + ': section 7 missing in PDF — rebuilt from unusual entries');
+    const used = {};
+    ab.forEach(r => {
+      let hit = null;
+      if (r.cat === 'Unusual filling variance'){
+        hit = x.unusual.find((u, i) => !used[i] && normV(u.vehicle) === normV(r.vehicle) && Math.abs(u.cardL - r.litres) < 0.005);
+        if (hit) used[x.unusual.indexOf(hit)] = 1;
+      }
+      m.s5.push({ date: d, vehicle: r.vehicle, dt: hit ? d + ' ' + hit.cardTime : (d + ((r.issue.match(/@ \d{2}:\d{2}/g)||[]).length ? ' ' + r.issue.match(/@ \d{2}:\d{2}/g).map(z=>z.slice(2)).join(', ') : '')), variance: hit ? +(hit.gpsL - hit.cardL).toFixed(2) : null,
+        issue: (r.cat === 'Unusual filling variance' ? '' : r.cat + ': ') + r.issue, action: r.action || '' });
+    });
+  });
+  m.s3.sort((a,b) => a.dt.localeCompare(b.dt) || a.vehicle.localeCompare(b.vehicle));
+  return m;
+}
+
+/* ---------- on-screen / print HTML ---------- */
+function T(title, sub, head, rows, foot){
+  return `<div class="report-section"><div class="sec-title">${escH(title)}</div>${sub?`<div class="sec-sub">${sub}</div>`:''}<table class="simple"><thead><tr>${head}</tr></thead><tbody>${rows||`<tr><td class="none" colspan="12">None.</td></tr>`}${foot||''}</tbody></table></div>`;
+}
+const th = (t, n) => `<th${n?' class="num"':''}>${t}</th>`;
+function renderReportHtml(m){
+  if (!m.dates.length) return '';
+  const d0 = m.dates[0], d1 = m.dates[m.dates.length-1];
+  let r = '';
+  // 1
+  const S = m.s1; const sm = k => sumOf(S, x => x[k]);
+  r += T('1. Mobitel Bill Summary', `${d0} → ${d1} (${m.dates.length} day${m.dates.length>1?'s':''})`,
+    th('Date') + th('Diesel (L)',1) + th('Petrol (L)',1) + th('Super Diesel (L)',1) + th('Total Ltr',1) + th('Total Amount',1),
+    S.map(x => `<tr><td><b>${x.date}</b></td><td class="num">${f2(x.diesel)}</td><td class="num">${f2(x.petrol)}</td><td class="num">${f2(x.superD)}</td><td class="num">${f2(x.total)}</td><td class="num">${f2(x.amt)}</td></tr>`).join(''),
+    `<tr class="subtotal-row"><td><b>Total</b></td><td class="num"><b>${f2(sm('diesel'))}</b></td><td class="num"><b>${f2(sm('petrol'))}</b></td><td class="num"><b>${f2(sm('superD'))}</b></td><td class="num"><b>${f2(sm('total'))}</b></td><td class="num"><b>${f2(sm('amt'))}</b></td></tr>`);
+  // 2
+  const c2 = sumOf(m.s2, x => x.cardL), g2 = sumOf(m.s2, x => x.gpsL);
+  r += T('2. Filling variance +1.5', 'Unusual fillings and fills with more than ±1.5 L variance (Fuel Pump vs GPS). Shaded rows = flagged UNUSUAL.',
+    th('Date') + th('Vehicle') + th('Vehicle Type') + th('Pumped (Mobitel)',1) + th('Pumped (GPS)',1) + th('Variance',1) + th('Vari %',1) + th('Op. Comment'),
+    m.s2.map(x => { const v = x.gpsL - x.cardL; return `<tr class="${x.unusual?'unu':''}"><td>${x.date} ${x.time}</td><td><b>${escH(x.vehicle)}</b></td><td>${escH(x.type)}</td><td class="num">${f2(x.cardL)}</td><td class="num">${f2(x.gpsL)}</td><td class="num">${f2s(v)}</td><td class="num">${x.cardL?((v/x.cardL*100>0?'+':'')+(v/x.cardL*100).toFixed(1)):'-'}%</td><td></td></tr>`; }).join(''),
+    `<tr class="subtotal-row"><td colspan="3"><b>Total — ${m.s2.length} entries</b></td><td class="num"><b>${f2(c2)}</b></td><td class="num"><b>${f2(g2)}</b></td><td class="num"><b>${f2s(g2-c2)}</b></td><td class="num"><b>${c2?((g2-c2)/c2*100>0?'+':'')+((g2-c2)/c2*100).toFixed(1):'-'}%</b></td><td></td></tr>`);
+  // 4
+  const RK = { Low:'', High:'amber', Critical:'red' };
+  r += T('4. Fuel Pump Time Variance GPS & Pump Report — more than 5 min', 'Variance = minutes between card time and first GPS fill. Risk: Low ≤ 30 min, High ≤ 240 min, Critical above.',
+    th('Vehicle') + th('Card Time') + th('GPS Time') + th('Variance (min)',1) + th('Risk'),
+    m.s4.map(x => `<tr><td><b>${escH(x.vehicle)}</b></td><td>${x.cardDT}</td><td>${x.gpsDT}</td><td class="num">${x.mins}</td><td><span class="rk ${RK[x.risk]||''}">${x.risk}</span></td></tr>`).join(''));
+  // 3
+  const l3 = sumOf(m.s3, x => x.litres);
+  r += T('3. GPS Unavailable & Offline Vehicle List', `${m.s3.length} card entries · ${f2(l3)} L not matched to a Sedawatta GPS fill.`,
+    th('Vehicle') + th('Date & Time') + th('Pumped (Mobitel)',1) + th('Category'),
+    m.s3.map(x => `<tr><td><b>${escH(x.vehicle)}</b></td><td>${x.dt}</td><td class="num">${f2(x.litres)}</td><td>${escH(x.category)}</td></tr>`).join(''),
+    `<tr class="subtotal-row"><td colspan="2"><b>Total — ${m.s3.length} entries</b></td><td class="num"><b>${f2(l3)}</b></td><td></td></tr>`);
+  // 5
+  r += T('5. Abnormal Highlights & Recommendations', m.notes.length ? escH(m.notes.join(' · ')) : '',
+    th('Vehicle') + th('Date & Time') + th('Variance',1) + th('Op. Comment') + th('Observed issue / Action'),
+    m.s5.map(x => `<tr><td><b>${escH(x.vehicle)}</b></td><td>${x.dt}</td><td class="num">${x.variance==null?'':f2s(x.variance)}</td><td></td><td class="small">${escH(x.issue)}${x.action?' — '+escH(x.action):''}</td></tr>`).join(''));
+  return r + renderMatricesHtml(m);
+}
+
+
+/* ---------- Vehicles across × days down matrices (variance only) ---------- */
+function buildMatrix(dates, rows, valFn){
+  const vm = {}, cells = {};
+  rows.forEach(r => { const k = normV(r.vehicle); vm[k] = vm[k] || r.vehicle; const d = r.date; ((cells[d] = cells[d] || {})[k] = (cells[d][k] || [])).push(valFn(r)); });
+  const keys = Object.keys(vm).sort((a,b) => vm[a].localeCompare(vm[b]));
+  return { dates, keys, names: keys.map(k => vm[k]), cells };
+}
+function buildMatrices(m){
+  return [
+    { title:'6. Filling variance — Pumped (GPS) less than card (vehicles across, days down)', sub:'Only fills where GPS litres are lower than the card pump. Cell = variance in L (GPS − card).', unit:'L', signed:true,
+      mat: buildMatrix(m.dates, m.s2.filter(x => x.gpsL < x.cardL), r => +(r.gpsL - r.cardL).toFixed(2)) },
+    { title:'7. Fuel Pump Time Variance GPS & Pump Report (vehicles across, days down)', sub:'Cell = minutes between card time and first GPS fill (more than 5 min).', unit:'min', signed:false,
+      mat: buildMatrix(m.dates, m.s4, r => r.mins) },
+    { title:'8. GPS Unavailable & Offline Vehicle List (vehicles across, days down)', sub:'Cell = litres pumped on the card with no GPS fill matched.', unit:'L', signed:false,
+      mat: buildMatrix(m.dates, m.s3, r => r.litres) }
+  ];
+}
+const cellTxt = (arr, x) => arr ? arr.map(v => x.signed ? f2s(v) : (x.unit==='min' ? String(v) : f2(v))).join(' / ') : '';
+function renderMatricesHtml(m){
+  const CH = 14; let out = '';
+  buildMatrices(m).forEach(x => {
+    const M = x.mat, tot = a => sumOf(a || [], v => v);
+    if (!M.keys.length){ out += `<div class="report-section"><div class="sec-title">${escH(x.title)}</div><table class="simple"><tbody><tr><td class="none">None.</td></tr></tbody></table></div>`; return; }
+    let h = `<div class="report-section"><div class="sec-title">${escH(x.title)}</div><div class="sec-sub">${x.sub} ${M.keys.length} vehicles.</div>`;
+    for (let i = 0; i < M.keys.length; i += CH){
+      const ks = M.keys.slice(i, i+CH), nm = M.names.slice(i, i+CH);
+      h += `<div style="overflow-x:auto;margin-bottom:8px"><table class="simple mx across"><thead><tr><th>Date</th>${nm.map(n => `<th class="vh">${escH(n)}</th>`).join('')}<th class="num">Day total (all)</th></tr></thead><tbody>`;
+      M.dates.forEach(d => { const dt = sumOf(M.keys, k => tot((M.cells[d]||{})[k]));
+        h += `<tr><td><b>${d}</b></td>${ks.map(k => `<td class="num">${cellTxt((M.cells[d]||{})[k], x)}</td>`).join('')}<td class="num"><b>${x.signed?f2s(dt):(x.unit==='min'?dt:f2(dt))}</b></td></tr>`; });
+      h += `<tr class="subtotal-row"><td><b>Total (${x.unit})</b></td>${ks.map(k => { const t = sumOf(M.dates, d => tot((M.cells[d]||{})[k])); return `<td class="num"><b>${x.signed?f2s(t):(x.unit==='min'?t:f2(t))}</b></td>`; }).join('')}<td></td></tr></tbody></table></div>`;
+    }
+    out += h + '</div>';
+  });
+  return out;
+}
+function addMatrixSheet(wb, m){
+  const ws = wb.addWorksheet('Vehicle x Day');
+  const thin = { style:'thin', color:{argb:'FFBDB8AA'} }, B = { top:thin, left:thin, bottom:thin, right:thin };
+  const HF = { type:'pattern', pattern:'solid', fgColor:{argb:'FFEFECE2'} }, TF = { type:'pattern', pattern:'solid', fgColor:{argb:'FFE9E5D8'} }, SF = { type:'pattern', pattern:'solid', fgColor:{argb:'FFDFE9E2'} };
+  ws.getColumn(1).width = 14; let r = 1, maxC = 2;
+  ws.getCell(r,1).value = 'Vehicles across · days down (variance only)'; ws.getCell(r,1).font = { bold:true, size:13 }; r += 2;
+  buildMatrices(m).forEach(x => {
+    const M = x.mat, nC = M.keys.length + 2; maxC = Math.max(maxC, nC);
+    const t = ws.getCell(r,1); t.value = x.title; t.font = { bold:true }; for (let c=1;c<=Math.max(nC,8);c++) ws.getCell(r,c).fill = TF; r++;
+    const s = ws.getCell(r,1); s.value = x.sub; s.font = { italic:true, size:9, color:{argb:'FF7A8390'} }; r++;
+    if (!M.keys.length){ ws.getCell(r,1).value = 'None.'; r += 2; return; }
+    const hr = r; ws.getCell(r,1).value = 'Date';
+    M.names.forEach((n,i) => ws.getCell(r,2+i).value = n); ws.getCell(r,nC).value = 'Day total (all)';
+    for (let c=1;c<=nC;c++){ const k = ws.getCell(r,c); k.font = { bold:true }; k.fill = HF; k.border = B; k.alignment = { horizontal:'center', wrapText:true }; } r++;
+    const fmt = x.unit==='min' ? '0' : '#,##0.00;-#,##0.00';
+    const first = r;
+    M.dates.forEach(d => {
+      ws.getCell(r,1).value = new Date(d + 'T00:00:00Z'); ws.getCell(r,1).numFmt = 'yyyy-mm-dd'; ws.getCell(r,1).border = B;
+      M.keys.forEach((k,i) => { const a = (M.cells[d]||{})[k], c = ws.getCell(r,2+i); c.border = B; c.numFmt = fmt;
+        if (a){ c.value = +sumOf(a, v => v).toFixed(2); if (a.length > 1) c.note = 'Fills: ' + a.map(v => x.signed ? f2s(v) : v).join(' / '); } });
+      const L1 = ws.getColumn(2).letter, L2 = ws.getColumn(nC-1).letter;
+      const dt = ws.getCell(r,nC); dt.value = { formula:`SUM(${L1}${r}:${L2}${r})`, result: sumOf(M.keys, k => sumOf((M.cells[d]||{})[k]||[], v => v)) }; dt.numFmt = fmt; dt.font = { bold:true }; dt.border = B; r++;
+    });
+    ws.getCell(r,1).value = 'Total';
+    M.keys.forEach((k,i) => { const L = ws.getColumn(2+i).letter; const c = ws.getCell(r,2+i); c.value = { formula:`SUM(${L}${first}:${L}${r-1})`, result: sumOf(M.dates, d => sumOf((M.cells[d]||{})[k]||[], v => v)) }; c.numFmt = fmt; });
+    for (let c=1;c<=nC;c++){ const k = ws.getCell(r,c); k.fill = SF; k.font = { bold:true }; k.border = B; } r += 3;
+  });
+  for (let c=2;c<=maxC;c++) ws.getColumn(c).width = 12;
+  ws.views = [{ state:'frozen', xSplit:1, ySplit:0 }];
+  ws.pageSetup = { orientation:'landscape', paperSize:9, fitToPage:true, fitToWidth:1, fitToHeight:0 };
+}
+
+/* ---------- Excel (same section order & columns as GPS.xlsx; extras added to the right) ---------- */
+async function buildWorkbook(m, ExcelJS){
+  const wb = new ExcelJS.Workbook(); const ws = wb.addWorksheet('Sheet1');
+  [18,18,18,18,16,14,10,34].forEach((w,i) => ws.getColumn(i+1).width = w);
+  const thin = { style:'thin', color:{argb:'FFBDB8AA'} }, B = { top:thin, left:thin, bottom:thin, right:thin };
+  const HF = { type:'pattern', pattern:'solid', fgColor:{argb:'FFEFECE2'} };
+  const TF = { type:'pattern', pattern:'solid', fgColor:{argb:'FFE9E5D8'} };
+  const UF = { type:'pattern', pattern:'solid', fgColor:{argb:'FFFBEEE0'} };
+  const SF = { type:'pattern', pattern:'solid', fgColor:{argb:'FFDFE9E2'} };
+  let r = 1;
+  const d0 = m.dates[0], d1 = m.dates[m.dates.length-1];
+  ws.getCell(r,1).value = `CLEANTECH (PVT) LTD — Fuel Card (Mobitel OneFuel) vs GPS Reconciliation · ${d0}${d0!==d1?' → '+d1:''}`;
+  ws.getCell(r,1).font = { bold:true, size:13 }; r += 1;
+  const title = t => { const c = ws.getCell(r,1); c.value = t; c.font = { bold:true, size:11 }; for (let i=1;i<=8;i++) ws.getCell(r,i).fill = TF; r++; };
+  const hdr = (arr, row) => arr.forEach((t,i) => { const c = ws.getCell(row||r, i+1); c.value = t; c.font = { bold:true }; c.fill = HF; c.border = B; c.alignment = { vertical:'middle', horizontal:'center', wrapText:true }; });
+  const box = (row, n, fill) => { for (let i=1;i<=n;i++){ const c = ws.getCell(row,i); c.border = B; if (fill) c.fill = fill; } };
+  const NUM = '#,##0.00', PCT = '0.0%';
+
+  // 1
+  title('1. Mobitel Bill Summary');
+  ws.mergeCells(r,2,r,4); ws.mergeCells(r,5,r+1,5); ws.mergeCells(r,6,r+1,6);
+  hdr(['', 'Fuel Type','','', 'Total Ltr','Total Amount'], r); hdr(['Date','Diesel','Petrol','Super Diesel'], r+1);
+  ws.getCell(r,1).border = B; ws.getCell(r,1).fill = HF; r += 2;
+  const s1a = r;
+  m.s1.forEach(x => {
+    ws.getCell(r,1).value = new Date(x.date + 'T00:00:00Z'); ws.getCell(r,1).numFmt = 'yyyy-mm-dd';
+    [x.diesel, x.petrol, x.superD].forEach((v,i) => { ws.getCell(r,2+i).value = v; });
+    ws.getCell(r,5).value = x.other ? x.total : { formula:`SUM(B${r}:D${r})`, result:x.total };
+    ws.getCell(r,6).value = x.amt;
+    for (let c=2;c<=6;c++) ws.getCell(r,c).numFmt = NUM;
+    box(r,6); r++;
+  });
+  ws.getCell(r,1).value = 'Total'; ws.getCell(r,1).font = { bold:true };
+  const colL = ['','','B','C','D','E','F'];
+  const keys = [null,null,'diesel','petrol','superD','total','amt'];
+  for (let c=2;c<=6;c++){ const cell = ws.getCell(r,c); cell.value = { formula:`SUM(${colL[c]}${s1a}:${colL[c]}${r-1})`, result: sumOf(m.s1, x => x[keys[c]]) }; cell.numFmt = NUM; }
+  box(r,6,SF); for (let c=1;c<=6;c++) ws.getCell(r,c).font = { bold:true }; r += 2;
+
+  // 2
+  title('2. filling variance +1.5');
+  hdr(['Date ','Vehicle ','Vehicle Type ','Pumped (Mobitel) ','Pumped (GPS) ','Variance ','Vari % ','Op. Comment']); r++;
+  const s2a = r;
+  m.s2.forEach(x => {
+    ws.getCell(r,1).value = x.date + ' ' + x.time; ws.getCell(r,2).value = x.vehicle; ws.getCell(r,3).value = x.type;
+    ws.getCell(r,4).value = x.cardL; ws.getCell(r,5).value = x.gpsL;
+    ws.getCell(r,6).value = { formula:`E${r}-D${r}`, result:+(x.gpsL-x.cardL).toFixed(2) };
+    ws.getCell(r,7).value = { formula:`IF(D${r}=0,0,F${r}/D${r})`, result: x.cardL ? (x.gpsL-x.cardL)/x.cardL : 0 };
+    [4,5,6].forEach(c => ws.getCell(r,c).numFmt = NUM); ws.getCell(r,7).numFmt = PCT;
+    box(r,8, x.unusual ? UF : null); r++;
+  });
+  if (m.s2.length){
+    ws.getCell(r,1).value = 'Total'; const c2 = sumOf(m.s2,x=>x.cardL), g2 = sumOf(m.s2,x=>x.gpsL);
+    ws.getCell(r,4).value = { formula:`SUM(D${s2a}:D${r-1})`, result:c2 }; ws.getCell(r,5).value = { formula:`SUM(E${s2a}:E${r-1})`, result:g2 };
+    ws.getCell(r,6).value = { formula:`E${r}-D${r}`, result:g2-c2 }; ws.getCell(r,7).value = { formula:`IF(D${r}=0,0,F${r}/D${r})`, result: c2?(g2-c2)/c2:0 };
+    [4,5,6].forEach(c => ws.getCell(r,c).numFmt = NUM); ws.getCell(r,7).numFmt = PCT;
+    box(r,8,SF); for (let c=1;c<=8;c++) ws.getCell(r,c).font = { bold:true }; r++;
+  }
+  ws.getCell(r,1).value = 'Shaded rows = flagged UNUSUAL filling on the daily report.'; ws.getCell(r,1).font = { italic:true, size:9, color:{argb:'FF7A8390'} }; r += 2;
+
+  // 4
+  title('4. Fuel Pump Time Variance GPS & Pump Report — more than 5 min');
+  hdr(['Vehicle ','Card Time ','GPS Time ','Variance ','Risk']); r++;
+  m.s4.forEach(x => {
+    ws.getCell(r,1).value = x.vehicle; ws.getCell(r,2).value = x.cardDT; ws.getCell(r,3).value = x.gpsDT; ws.getCell(r,4).value = x.mins; ws.getCell(r,5).value = x.risk;
+    ws.getCell(r,4).numFmt = '0" min"';
+    box(r,5, x.risk==='Critical' ? { type:'pattern', pattern:'solid', fgColor:{argb:'FFFBE9E6'} } : x.risk==='High' ? UF : null); r++;
+  });
+  r += 1;
+
+  // 3
+  title('3. GPS Unavailable & Offline Vehicle List');
+  hdr(['Vehicle ','Date & Time','Pumped (Mobitel)','Category']); r++;
+  const s3a = r;
+  m.s3.forEach(x => { ws.getCell(r,1).value = x.vehicle; ws.getCell(r,2).value = x.dt; ws.getCell(r,3).value = x.litres; ws.getCell(r,3).numFmt = NUM; ws.getCell(r,4).value = x.category; box(r,4); r++; });
+  if (m.s3.length){ ws.getCell(r,1).value = 'Total'; ws.getCell(r,3).value = { formula:`SUM(C${s3a}:C${r-1})`, result:sumOf(m.s3,x=>x.litres) }; ws.getCell(r,3).numFmt = NUM; box(r,4,SF); for (let c=1;c<=4;c++) ws.getCell(r,c).font = { bold:true }; r++; }
+  r += 1;
+
+  // 5
+  title('5. Abnormal Highlights & Recommendations');
+  hdr(['Vehicle ','Date & Time','Variance ','Op. Comment','Observed issue / Action']); ws.mergeCells(r,5,r,8); r++;
+  m.s5.forEach(x => {
+    ws.getCell(r,1).value = x.vehicle; ws.getCell(r,2).value = x.dt; if (x.variance!=null){ ws.getCell(r,3).value = x.variance; ws.getCell(r,3).numFmt = NUM; }
+    ws.mergeCells(r,5,r,8); ws.getCell(r,5).value = x.issue + (x.action ? ' — ' + x.action : ''); ws.getCell(r,5).alignment = { wrapText:true, vertical:'top' };
+    box(r,8); r++;
+  });
+  addMatrixSheet(wb, m);
+  ws.views = [{ showGridLines:true }];
+  ws.pageSetup = { orientation:'landscape', paperSize:9, fitToPage:true, fitToWidth:1, fitToHeight:0 };
+  return wb;
+}
+if (typeof module !== 'undefined') module.exports = { buildModel, renderReportHtml, buildWorkbook };
+
+/* ===================== APP ===================== */
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+const days = {};
+let rebuildMultiples = false;
+const sortedDates = () => Object.keys(days).sort();
+async function extractPdfText(file){
+  const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+  let text = '';
+  for (let p = 1; p <= pdf.numPages; p++){ const c = await (await pdf.getPage(p)).getTextContent(); text += c.items.map(i => i.str).join(' ') + '\n'; }
+  return text;
+}
+async function handleUpload(ev){
+  const files = [...ev.target.files]; if (!files.length) return;
+  const msgs = [], status = document.getElementById('upStatus');
+  for (let i = 0; i < files.length; i++){
+    status.textContent = `Reading ${i+1}/${files.length}: ${files[i].name} …`;
+    try {
+      const day = parseDailyReport(await extractPdfText(files[i]), files[i].name);
+      if (day.error){ msgs.push(`✖ ${files[i].name}: ${day.error}`); continue; }
+      if (days[day.date]) msgs.push(`↻ ${day.date}: replaced earlier file`);
+      days[day.date] = day;
+    } catch (e){ msgs.push(`✖ ${files[i].name}: ${e.message}`); }
+  }
+  ev.target.value = '';
+  status.textContent = `${sortedDates().length} daily report(s) loaded.` + (msgs.length ? '  ' + msgs.join(' | ') : '');
+  renderAll();
+}
+function removeDay(d){ delete days[d]; renderAll(); }
+function clearAll(){ Object.keys(days).forEach(k => delete days[k]); document.getElementById('upStatus').textContent = 'No file selected'; renderAll(); }
+function setMultiples(v){ rebuildMultiples = v; renderAll(); }
+const model = () => buildModel(days, { multiples: rebuildMultiples });
+
+function renderLoaded(){
+  const box = document.getElementById('loaded'), ds = sortedDates();
+  if (!ds.length){ box.innerHTML = ''; return; }
+  let h = '<table class="chk"><thead><tr><th>Date</th><th>File</th><th>Unusual</th><th>&gt;±1.5 L</th><th>GPS unavail.</th><th>Time &gt;5</th><th>Variance OK</th><th>Abnormal</th><th></th></tr></thead><tbody>';
+  ds.forEach(d => {
+    const day = days[d];
+    const cell = l => { const c = day.checks.find(x => x.label === l); if (!c) return '<td>–</td>'; return `<td class="${c.ok?'okc':'badc'}">${c.got}${c.ok?' ✓':' / '+c.want+' ⚠'}</td>`; };
+    h += `<tr><td><b>${d}</b></td><td>${escH(day.fileName)}</td>${cell('Unusual filling variance')}${cell('More than ±1.5 L variance')}${cell('GPS unavailable & offline')}${cell('Time variance > 5 min')}${cell('Variance OK')}${day.abnormalMissing?'<td class="badc">missing ⚠</td>':cell('Abnormal highlights')}<td><button class="ghost" onclick="removeDay('${d}')">Remove</button></td></tr>`;
+  });
+  h += '</tbody></table><div class="hint" style="margin-top:6px">✓ = rows read from the PDF match the count printed in that section’s heading.</div>';
+  if (ds.some(d => days[d].abnormalMissing)) h += `<label class="chk" style="margin-top:6px"><input type="checkbox" ${rebuildMultiples?'checked':''} onchange="setMultiples(this.checked)"> Some PDFs have no section 7 — also rebuild “multiple same-day fillings”</label>`;
+  box.innerHTML = h;
+}
+function renderAll(){
+  renderLoaded();
+  const ds = sortedDates();
+  document.getElementById('tools').style.display = ds.length ? 'flex' : 'none';
+  document.getElementById('reportArea').innerHTML = ds.length ? `<div class="card" id="reportCard">${renderReportHtml(model())}</div>` : '';
+}
+async function downloadXlsx(){
+  const ds = sortedDates(); if (!ds.length) return;
+  const wb = await buildWorkbook(model(), ExcelJS);
+  const buf = await wb.xlsx.writeBuffer();
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([buf], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+  a.download = `Fuel_Reconciliation_${ds[0]}_to_${ds[ds.length-1]}.xlsx`; a.click();
+}
+function printCss(){ return document.getElementById('repCss').textContent + `
+  @page{size:A4 landscape;margin:10mm 8mm}
+  body{font-family:Arial,Helvetica,sans-serif;color:#1b2430;margin:0;padding:6px;font-size:9.5pt;background:#fff}
+  .report-heading{text-align:center;margin-bottom:10px}.report-heading .l1{font-size:15pt;font-weight:700;text-transform:uppercase}.report-heading .l2{font-size:10.5pt;color:#333;margin-top:3px}
+  table.simple{font-size:8pt} thead{display:table-header-group} tr{page-break-inside:avoid}
+  .report-section{margin-bottom:14px}`; }
+function pageHtml(ds, autoPrint){
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Fuel Reconciliation ${ds[0]} to ${ds[ds.length-1]}</title><style>${printCss()}</style></head><body>
+  <div class="report-heading"><div class="l1">CLEANTECH (PVT) LTD — FUEL RECONCILIATION REPORT</div><div class="l2">Fuel card (Mobitel OneFuel) vs GPS fills · ${ds[0]}${ds.length>1?' → '+ds[ds.length-1]:''}</div></div>
+  ${renderReportHtml(model())}${autoPrint?'<script>window.onload=function(){setTimeout(function(){window.focus();window.print();},300);};<\/script>':''}</body></html>`;
+}
+function downloadPdf(){
+  const ds = sortedDates(); if (!ds.length) return;
+  const w = window.open('', '_blank');
+  if (!w){ alert('Please allow pop-ups, then choose “Save as PDF” in the print dialog.'); return; }
+  w.document.write(pageHtml(ds, true)); w.document.close();
+}
+document.getElementById('upFile').addEventListener('change', handleUpload);
+renderAll();
+
+</script></body></html>

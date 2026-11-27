@@ -1,0 +1,1571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fuel Card (Excel / Mobitel PDF) vs GPS — Multi-Day Matcher</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+:root{--ink:#1b2430;--paper:#f6f4ee;--panel:#fff;--line:#d9d4c7;--accent:#2c5f4f;--accent-ink:#eef5f1;--amber:#a9631a;--amber-bg:#fbeee0;--red:#a4342a;--red-bg:#fbe9e6;--green:#2c6b3f;--green-bg:#e7f2e9;--muted:#7a8390;--grey-bg:#f1f5f9;}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;background:var(--paper);color:var(--ink);line-height:1.4}
+header{padding:20px 28px 12px;border-bottom:1px solid var(--line);background:var(--panel)}
+header h1{margin:0 0 4px;font-size:19px;font-weight:700}
+header p{margin:0;color:#5a6470;font-size:12.5px;max-width:1100px}
+main{padding:16px 28px 80px;max-width:1500px;margin:0 auto}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:6px;margin-bottom:14px;padding:14px}
+.card h2{margin:0 0 10px;font-size:14px;font-weight:700}
+.upload-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:720px){.upload-grid{grid-template-columns:1fr}}
+.upload-box{border:1.5px dashed var(--line);border-radius:6px;padding:12px;background:#fbfaf6}
+.upload-box.loaded{border-color:#9ec7ab;background:var(--green-bg)}
+.upload-box label{font-weight:700;font-size:12.5px;display:block;margin-bottom:6px}
+.file-btn{display:inline-flex;align-items:center;padding:7px 13px;border:1px solid var(--line);border-radius:4px;cursor:pointer;font-weight:600;font-size:12.5px;background:#fff}
+.file-btn:hover{background:#f4f1e8}
+.upload-status{font-size:11.5px;color:var(--muted);margin-top:6px;min-height:14px}
+.file-list{font-size:11px;color:#3c4652;margin-top:4px;line-height:1.5}
+.file-list .f{display:inline-block;background:#eef2f6;border-radius:3px;padding:1px 6px;margin:1px 3px 1px 0}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
+button{font-family:inherit;font-size:12.5px;font-weight:600;border-radius:5px;border:1px solid transparent;padding:7px 13px;cursor:pointer;transition:.12s}
+button.primary{background:var(--accent);color:var(--accent-ink)}button.primary:hover{background:#254f42}
+button.ghost{background:transparent;border-color:var(--line);color:var(--ink)}button.ghost:hover{background:#efece2}
+button:disabled{opacity:.4;cursor:not-allowed}
+.stats{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:10px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:9px 13px;min-width:100px}
+.stat .num{font-size:17px;font-weight:700;line-height:1}
+.stat .label{font-size:10.5px;color:var(--muted);margin-top:3px}
+.stat.red .num{color:var(--red)}.stat.amber .num{color:var(--amber)}.stat.green .num{color:var(--green)}
+.searchbar{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.searchbar input[type=text]{padding:7px 10px;border:1px solid var(--line);border-radius:4px;font-size:12.5px;min-width:200px}
+.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:6px;background:var(--panel);max-height:70vh}
+table{border-collapse:collapse;width:100%;font-size:12px;min-width:1000px}
+thead th{position:sticky;top:0;background:#efece2;text-align:left;padding:7px 8px;font-weight:700;border-bottom:1px solid var(--line);white-space:nowrap;z-index:2}
+tbody td{padding:5px 8px;border-bottom:1px solid #eeece3;vertical-align:top}
+tbody tr:hover{background:#faf8f2}
+td.num,th.num{text-align:right}
+tr.section-row td{background:#e9e5d8;font-weight:700;font-size:11.5px;padding:6px 8px;border-top:2px solid var(--line)}
+tr.subtotal-row td{background:#f2f0e6;border-top:1px solid var(--line);border-bottom:2px solid var(--line)}
+tr.grandtotal-row td{background:#dfe9e2;border-top:2px solid var(--accent);border-bottom:2px solid var(--accent);font-size:12.5px}
+.badge{display:inline-block;font-size:10px;font-weight:700;padding:1px 6px;border-radius:9px}
+.badge.green{background:var(--green-bg);color:var(--green)}.badge.red{background:var(--red-bg);color:var(--red)}.badge.amber{background:var(--amber-bg);color:var(--amber)}
+.badge.grey{background:var(--grey-bg);color:#475569}
+.badge.blue{background:#e0ebfa;color:#1d4ed8}
+.gps-tag{display:inline-block;background:#e7eef9;color:#1d4ed8;border:1px solid #93c5fd;padding:1px 6px;border-radius:4px;font-size:10.5px;font-weight:600;margin:1px 3px 1px 0}
+.gps-tag .t{font-weight:700}
+.btn-alloc{background:var(--accent);color:var(--accent-ink);border:none;padding:4px 9px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:700}
+.btn-alloc:hover{background:#254f42}
+.btn-clear{background:transparent;color:var(--red);border:1px solid var(--red);padding:4px 9px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:700;margin-left:3px}
+.btn-clear:hover{background:var(--red-bg)}
+.empty-state{padding:30px 20px;text-align:center;color:var(--muted);font-size:13px}
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(15,23,42,.6);z-index:1000;justify-content:center;align-items:center}
+.modal-overlay.show{display:flex}
+.modal-content{background:#fff;width:94%;max-width:1100px;max-height:88vh;border-radius:10px;box-shadow:0 10px 25px rgba(0,0,0,.2);display:flex;flex-direction:column;overflow:hidden}
+.modal-header{padding:12px 18px;background:var(--accent);color:#fff;display:flex;justify-content:space-between;align-items:center}
+.modal-header h3{margin:0;font-size:14px}
+.modal-header small{opacity:.9;font-size:11.5px}
+.modal-body{padding:14px 18px;overflow-y:auto;flex-grow:1}
+.modal-footer{padding:11px 18px;background:#f1f5f9;display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--line)}
+.btn-save{background:var(--green);color:#fff;border:none;padding:7px 15px;border-radius:5px;cursor:pointer;font-weight:600}
+.btn-cancel{background:#64748b;color:#fff;border:none;padding:7px 15px;border-radius:5px;cursor:pointer;font-weight:600}
+.close-btn{background:transparent;border:none;color:white;font-size:1.3rem;cursor:pointer;line-height:1}
+.chk{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:#3c4652}
+.hint{font-size:11.5px;color:var(--muted)}
+.alert{padding:9px 13px;border-radius:6px;font-size:12.5px;margin-bottom:9px}
+.alert.warn{background:var(--amber-bg);color:var(--amber);border:1px solid #f0c79a}
+.alert.info{background:#e7eef9;color:#1d4ed8;border:1px solid #b5cff5}
+.alert.ok{background:var(--green-bg);color:var(--green);border:1px solid #9ec7ab}
+.offline-category{padding:4px 6px;border:1px solid var(--line);border-radius:4px;font-size:11.5px;background:#fff;font-family:inherit;min-width:150px}
+.offline-category:focus{border-color:var(--accent);outline:none}
+.offline-detail{margin-top:3px;width:100%;min-width:200px;border:1px solid var(--line);background:#fff;padding:4px 6px;border-radius:4px;font-size:11.5px;font-family:inherit;display:none}
+.offline-detail.show{display:block}
+.offline-detail:focus{border-color:var(--accent);outline:none}
+.reserved-row td{background:#f8fafc;color:#94a3b8}
+/* report sections (screen) */
+.report-section{margin-bottom:20px}
+.report-section .sec-title{font-size:13px;font-weight:700;margin:0 0 6px 0;padding:7px 12px;background:#e9e5d8;border-radius:5px;border-left:4px solid var(--accent)}
+.report-section .sec-sub{font-size:11.5px;color:var(--muted);margin:0 0 6px 4px}
+.report-section .subsection{margin:0 0 12px 0}
+table.simple{width:100%;border-collapse:collapse;font-size:12px}
+table.simple th,table.simple td{border:1px solid var(--line);padding:5px 7px;text-align:left;vertical-align:top}
+table.simple th{background:#f1f5f9}
+table.simple td.num,table.simple th.num{text-align:right}
+.report-section .subsec-title{font-size:12px;font-weight:700;margin:0 0 5px 0;padding:5px 10px;background:#f0eee2;border-radius:4px;border-left:3px solid var(--amber);color:#7a3d0e}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Fuel Card (Excel / Mobitel OneFuel PDF) vs GPS — Multi-Day Manual Matcher</h1>
+  <p>Upload one or more fuel-card files (<b>Excel</b> or the <b>Mobitel OneFuel Transaction Report PDF</b>) and one or more GPS <em>Fuel Fillings</em> PDF files. Allocation is manual. Only Sedawatta Filling Station fills are offered for matching. Shift-aware: <b>D</b> shift on date <em>D</em> → fills that evening/night of <em>D</em> or early <em>D+1</em>; <b>N</b> shift on date <em>D</em> → fills that night of <em>D</em> or morning of <em>D+1</em>. A match is <b>OK</b> when variance is within <b>±1.5 L</b>.</p>
+</header>
+
+<main>
+  <div class="card">
+    <h2>Step 1 — Upload files (multiple allowed)</h2>
+    <div class="upload-grid">
+      <div class="upload-box" id="cardBox">
+        <label>Fuel Card files — Excel or Mobitel OneFuel PDF (one or more days)</label>
+        <label class="file-btn">📂 Choose .xlsx / .xls / .pdf (multi-select)<input type="file" id="cardFile" accept=".xlsx,.xls,.pdf,application/pdf" multiple style="display:none"></label>
+        <div class="upload-status" id="cardStatus">No file selected</div>
+        <div class="file-list" id="cardFileList"></div>
+      </div>
+      <div class="upload-box" id="gpsBox">
+        <label>GPS Fuel Fillings PDF files (one or more days)</label>
+        <label class="file-btn">📂 Choose PDF (multi-select)<input type="file" id="gpsFile" accept="application/pdf" multiple style="display:none"></label>
+        <div class="upload-status" id="gpsStatus">No file selected</div>
+        <div class="file-list" id="gpsFileList"></div>
+      </div>
+    </div>
+    <div class="row">
+      <label class="chk"><input type="checkbox" id="preferSameShift"> Filter modal to shift-predicted dates only</label>
+      <button class="ghost" style="margin-left:auto" onclick="resetAll()">Reset all</button>
+    </div>
+    <div id="loadAlert" style="margin-top:10px;"></div>
+  </div>
+
+  <div class="card">
+    <h2>Loaded fuel-card records</h2>
+    <div class="stats" id="cardStats"><div class="stat"><div class="num">0</div><div class="label">No file loaded</div></div></div>
+  </div>
+
+  <div class="card">
+    <h2>Step 2 — Allocate GPS fills (Sedawatta Filling Station only)</h2>
+    <div class="searchbar">
+      <input type="text" id="allocSearch" placeholder="Search vehicle, area, shift, fuel, date…" oninput="filterAllocTable()">
+      <label class="chk"><input type="checkbox" id="onlyUnallocated"> Show only unallocated</label>
+    </div>
+    <div class="table-wrap" id="allocTableWrap">
+      <div class="empty-state">Upload fuel-card file(s) to begin.</div>
+    </div>
+  </div>
+
+  <div class="card" id="offlineCard" style="display:none;">
+    <h2>On card, not on GPS — classify each entry</h2>
+    <p class="hint" style="margin:0 0 10px 0;">Pick a reason for each entry. In the printed report, Section 2 is split by these categories: <b>Offline</b>, <b>No GPS Tracker</b>, <b>Not filled</b>, <b>Staff fuel</b>, and <b>Other</b>.</p>
+    <div class="table-wrap" id="offlineTableWrap" style="max-height:none;"></div>
+  </div>
+
+  <div id="reportArea"></div>
+</main>
+
+<!-- GPS Allocation Modal -->
+<div class="modal-overlay" id="gpsModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div>
+        <h3 id="gpsModalTitle">Allocate GPS fills</h3>
+        <small id="gpsModalSubtitle"></small>
+      </div>
+      <button class="close-btn" onclick="closeGpsModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="hint" id="gpsModalHint" style="margin-bottom:8px;background:#e7eef9;color:#1d4ed8;padding:6px 10px;border-radius:5px;border:1px solid #b5cff5;">
+        Only fills at <b>Sedawatta Filling Station</b> are shown. Fills already allocated to another card entry are shown greyed-out with the card entry number.
+      </div>
+      <div id="unusualBox" style="display:none;margin-bottom:8px;padding:7px 10px;border:1px solid #e4b4b0;background:#fdf1f0;border-radius:5px;font-size:12.5px;">
+        <label style="display:flex;align-items:center;gap:7px;font-weight:600;color:#a4342a;cursor:pointer;">
+          <input type="checkbox" id="unusualChk" onchange="unusualTouched=true;syncUnusualBox()"> ⚠ Mark as unusual filling variance <span style="font-weight:400;color:#7a8390;">— ticked automatically when variance is more than 5 L</span>
+        </label>
+        <input type="text" id="unusualNote" placeholder="Reason / remark (optional) — printed in the separate Unusual Variance section"
+               style="display:none;width:100%;box-sizing:border-box;margin-top:6px;padding:6px 9px;border:1px solid var(--line);border-radius:4px;font-size:12.5px;">
+        <div id="unusualOff" style="display:none;color:#94a3b8;font-size:11.5px;margin-top:3px;">Tick at least one fill below to use this option.</div>
+      </div>
+      <div style="margin-bottom:8px;">
+        <input type="text" id="gpsSearch" placeholder="Search date, time…" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--line);border-radius:4px;font-size:12.5px;">
+      </div>
+      <div class="table-wrap" style="max-height:none;">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:36px;"><input type="checkbox" id="chkSelectAllGps" onclick="toggleSelectAllGps(this)"></th>
+              <th>No</th>
+              <th>GPS Date</th>
+              <th>GPS Time</th>
+              <th>Vehicle</th>
+              <th class="num">Litres</th>
+              <th>Location</th>
+            </tr>
+          </thead>
+          <tbody id="gpsModalBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="skipModal()" title="No fill to add — hide this entry from Step 2">Skip</button>
+      <button class="btn-save" onclick="saveGpsAllocation()">Save allocation</button>
+    </div>
+  </div>
+</div>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+const EXPECTED_LOCATION = 'Sedawatta Filling Station';
+const VARIANCE_TOLERANCE_L = 1.5;
+const UNUSUAL_VARIANCE_L = 5;          // |GPS - card| above this is marked "Unusual filling variance" automatically
+const OFFLINE_CATEGORIES = ['Offline', 'No GPS Tracker', 'Not filled', 'Staff fuel', 'Other'];
+const UNCLASSIFIED_LABEL = 'Not classified';
+
+let cardRows = [];
+let gpsRows = [];
+let allocations = {};     // cardId -> [gpsId, ...]
+let offlineReasons = {};  // cardId -> { category, detail }
+let skipped = {};         // cardId -> true  (user chose Skip: nothing to allocate, hide from Step 2)
+let showSkipped = false;
+let unusualTouched = false;   // user ticked / unticked the unusual box in this pop-up (stops the auto-tick)
+let unusual = {};         // cardId -> { note }  (flagged as unusual filling variance)
+let currentCardId = null;
+
+/* ---------- helpers ---------- */
+function esc(s){return (s??'').toString().replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+function normVeh(v){return String(v||'').toUpperCase().replace(/[^A-Z0-9]/g,'');}
+function isOnSite(g){return (g.location||'').toLowerCase().includes(EXPECTED_LOCATION.toLowerCase());}
+function setAlert(msg, kind){ document.getElementById('loadAlert').innerHTML = msg ? `<div class="alert ${kind||'info'}">${esc(msg)}</div>` : ''; }
+function addDays(iso, n){
+  if(!iso) return '';
+  const d = new Date(iso+'T00:00:00Z');
+  if(isNaN(d.getTime())) return '';
+  d.setUTCDate(d.getUTCDate()+n);
+  return d.toISOString().slice(0,10);
+}
+function dateDiffDays(a, b){
+  const da = new Date(a+'T00:00:00Z'), db = new Date(b+'T00:00:00Z');
+  return Math.round((da - db) / 86400000);
+}
+function shiftPredictedDates(card){
+  const s = String(card.shift||'').toUpperCase().trim();
+  const d = card.date;
+  if (!d) return [];
+  if (s === 'N') return [d, addDays(d, 1)];
+  if (s === 'D') return [d, addDays(d, 1)];
+  return [d, addDays(d,1), addDays(d,-1)];
+}
+function fmtDT(date, time){ return (date||'-') + (time && time !== '00:00' ? ' ' + time : ''); }
+function vtype(c){ return (c && c.vehicleType) ? c.vehicleType : '-'; }
+function gpsDtList(list, sep){ return list.map(g => g.date+' '+g.time).sort().join(sep || ', '); }
+
+function autoNoGpsTracker(c){
+  return !!c && /tractor|staff|common/i.test([c.vehicle, c.vehicleType, c.area, c.empName].join(' '));
+}
+/* manual flag (or manual opt-out) wins; otherwise auto-flag when |variance| > UNUSUAL_VARIANCE_L */
+function getUnusual(c, variance){
+  const m = unusual[c.id];
+  if (m) return m.off ? null : m;
+  if (variance != null && Math.abs(variance) > UNUSUAL_VARIANCE_L)
+    return { note: `Auto-flagged: variance ${variance > 0 ? '+' : ''}${(+variance).toFixed(2)} L (more than ±${UNUSUAL_VARIANCE_L} L)`, auto: true };
+  return null;
+}
+
+function getReason(cardId){
+  const r = offlineReasons[cardId];
+  if (r && r.category) return { category: r.category, detail: r.detail || '', auto:false };
+  const c = cardRows.find(x => x.id === cardId);
+  if (autoNoGpsTracker(c)) return { category:'No GPS Tracker', detail: (r && r.detail) || '', auto:true };
+  return { category:'', detail: (r && r.detail) || '', auto:false };
+}
+
+/* ============================================================
+   FUEL-CARD EXCEL PARSER
+   ============================================================ */
+function extractDate(v){
+  if (v instanceof Date && !isNaN(v))
+    return `${v.getFullYear()}-${String(v.getMonth()+1).padStart(2,'0')}-${String(v.getDate()).padStart(2,'0')}`;
+  if (typeof v === 'number') {
+    try {
+      const d = XLSX.SSF.parse_date_code(v);
+      if (d && d.y) return `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`;
+    } catch(_){}
+  }
+  const s = String(v ?? '').trim();
+  const m = s.match(/(\d{4})-(\d{2})-(\d{2})/);
+  return m ? m[0] : s;
+}
+
+function parseCardWorkbook(workbook, sourceFile){
+  const out = [];
+  workbook.SheetNames.forEach(sheetName => {
+    const sheet = workbook.Sheets[sheetName];
+    const raw = XLSX.utils.sheet_to_json(sheet, {header:1, raw:false, defval:''});
+    if (!raw.length) return;
+
+    let headerIdx = -1;
+    for (let i=0;i<Math.min(raw.length,8);i++){
+      const j = (raw[i]||[]).map(c=>String(c||'').toUpperCase()).join(' ');
+      if (j.includes('DEPOT') && (j.includes('VEHICLE')||j.includes('LITERS')||j.includes('LITRES'))) { headerIdx = i; break; }
+    }
+    if (headerIdx < 0) return;
+
+    let lastDepot = '', lastDate = '';
+    for (let i = headerIdx + 1; i < raw.length; i++){
+      const row = raw[i] || [];
+      const depotRaw = String(row[0] ?? '').trim();
+      if (depotRaw.startsWith('=') || /SUBTOTAL/i.test(depotRaw)) continue;
+      if (depotRaw) lastDepot = depotRaw;
+
+      const vehicle = String(row[3] ?? '').trim();
+      if (!vehicle || vehicle.toUpperCase() === 'VEHICLE NUMBER') continue;
+
+      const litersRaw = row[6];
+      const liters = (typeof litersRaw === 'number') ? litersRaw : (parseFloat(String(litersRaw).replace(/[^\d.\-]/g,'')) || 0);
+      if (!isFinite(liters) || liters === 0) continue;
+
+      let dateStr = extractDate(row[5]);
+      if (dateStr) lastDate = dateStr;
+
+      out.push({
+        depot: lastDepot, no: row[1] ?? '', vehicle, vehicleKey: normVeh(vehicle),
+        fuel: String(row[4] ?? '').trim(), liters, shift: String(row[7] ?? '').trim(),
+        area: String(row[14] ?? '').trim(), voucher: String(row[13] ?? '').trim(),
+        date: dateStr || lastDate, time: '00:00', sourceFile, sheetName
+      });
+    }
+  });
+  return out;
+}
+
+
+/* ---------- Mobitel PDF: read the TABLE by position (robust to wrapped / odd cells) ---------- */
+function parseMobitelItems(pages, fullText, sourceFile){
+  const warnings = [], none = { rows: [], all: [], warnings, footerOk: false };
+  const isSeq = s => /^\d{9}$/.test(s);
+  const seqAll = []; pages.forEach(pg => pg.forEach(it => { if (isSeq(it.s)) seqAll.push(it); }));
+  if (!seqAll.length || !pages.length) return none;
+  const spread = a => Math.max(...a) - Math.min(...a);
+  const rotated = spread(seqAll.map(i=>i.y)) < spread(seqAll.map(i=>i.x));   // Mobitel prints the table sideways
+  const U = it => rotated ? it.x : -it.y;                                    // row axis (grows down the table)
+  const C = it => rotated ? it.y + it.w/2 : it.x + it.w/2;                   // column-centre axis
+
+  // --- columns from the header labels on page 1
+  const HEAD = /^(Transaction|Status|DateTime|Mileage|\(km\)|Payable|Amt \(LKR\)|Balance|Amount|Litres|\(LKR\)|Ex Amt|Excess|Fill up Amt|Fill Up|Max|Max Limit|Limit\(LKR|\(Litres\)|PPL|Fuel|Type|Vehicle|No|Station|Cost Center Id 2|Cost Center Id|Office|Division|Card No|Emp Name|Emp Id|Id|Device|Seq\. No)$/;
+  const seq0 = pages[0].filter(it => isSeq(it.s));
+  if (!seq0.length) return none;
+  const firstU0 = Math.min(...seq0.map(U));
+  const hdr = pages[0].filter(it => HEAD.test(it.s) && U(it) < firstU0 - 1.5).sort((a,b) => C(a) - C(b));
+  const groups = [];
+  hdr.forEach(it => { const g = groups[groups.length-1]; if (g && Math.abs(C(it) - g.c) <= 4){ g.items.push(it); g.c = g.items.reduce((a,i)=>a+C(i),0)/g.items.length; } else groups.push({ c: C(it), items: [it] }); });
+  const KEY = { 'device seq. no':'seq','device id':'devid','emp id':'emp','emp name':'emp','card no':'card','division':'division','office':'office',
+    'cost center id':'cc','cost center id 2':'cc2','station':'station','vehicle no':'vehicle','fuel type':'fuel','ppl':'ppl',
+    'max limit (litres)':'maxL','max limit(lkr':'maxA','fill up litres':'fillL','fill up amt (lkr)':'fillA','excess litres':'exL','ex amt (lkr)':'exA',
+    'balance litres':'balL','balance amount':'balA','payable amt (lkr)':'payable','mileage (km)':'mileage','datetime':'dt','transaction status':'status' };
+  const cols = groups.map(g => ({ c: g.c, key: KEY[g.items.sort((a,b)=>U(a)-U(b)).map(i=>i.s).join(' ').toLowerCase().replace(/\s+/g,' ')] })).filter(c => c.key);
+  const need = ['seq','vehicle','fuel','fillL','dt','status'];
+  if (need.some(k => !cols.some(c => c.key === k))) return none;
+  const seqCol = cols.find(c => c.key === 'seq');
+  const colOf = it => { let b = null, bd = 1e9; cols.forEach(c => { const d = Math.abs(C(it) - c.c); if (d < bd){ bd = d; b = c; } }); return b.key; };
+
+  // --- split into records (anchor = Device Seq No); items above page-2+ first anchor continue the last record of the previous page
+  const recs = []; let prev = null;
+  pages.forEach((pg, pi) => {
+    const anchors = pg.filter(it => isSeq(it.s) && Math.abs(C(it) - seqCol.c) < 12).sort((a,b) => U(a) - U(b));
+    const pageRecs = anchors.map(a => ({ seq: a.s, main: [], cont: [] }));
+    const firstU = anchors.length ? U(anchors[0]) : Infinity;
+    pg.forEach(it => {
+      if (pi === 0 && U(it) < firstU - 1.5) return;                    // title / header area
+      let ri = -1;
+      for (let k = anchors.length - 1; k >= 0; k--) if (U(it) >= U(anchors[k]) - 1.5){ ri = k; break; }
+      if (ri < 0){ if (prev) prev.cont.push(it); return; }
+      if (ri === anchors.length - 1 && U(it) > U(anchors[ri]) + 38) return;   // report footer
+      pageRecs[ri].main.push(it);
+    });
+    pageRecs.forEach(r => recs.push(r));
+    if (pageRecs.length) prev = pageRecs[pageRecs.length-1];
+  });
+
+  const n = v => parseFloat(String(v).replace(/,/g,''));
+  const all = recs.map(r => {
+    const S = it => rotated ? it.y : it.x;                              // where the text starts along the column axis
+    const cellMain = {}, cellCont = {};
+    const put = (list, store) => list.forEach(it => { const k = colOf(it); (store[k] = store[k] || []).push(it); });
+    put(r.main, cellMain); put(r.cont, cellCont);                        // continuation text goes after the main text
+    const ordered = k => {
+      let m = (cellMain[k] || []).slice();
+      if (k === 'emp'){                                                  // Emp Id lines first, then Emp Name lines (each in row order)
+        m.sort((a,b) => S(a) - S(b)); let g = 0; const gi = new Map();
+        m.forEach((it,i) => { if (i && S(it) - S(m[i-1]) > 15) g++; gi.set(it, g); });
+        m.sort((a,b) => gi.get(a) - gi.get(b) || U(a) - U(b));
+      } else m.sort((a,b) => U(a) - U(b) || C(a) - C(b));
+      return m.concat((cellCont[k] || []).slice().sort((a,b) => U(a) - U(b)));
+    };
+    // lines of one wrapped cell: glue when the next line carries on a word ("Wellampitiy"+"a Filling"), otherwise a space
+    const glue = list => list.reduce((o, it) => (o && ((/^[a-z]/.test(it.s) && /[A-Za-z]$/.test(o)) || /[A-Za-z0-9]-$/.test(o))) ? o + it.s : (o ? o + ' ' : '') + it.s, '');
+    const txt = k => ['station','emp'].includes(k) ? glue(ordered(k)).replace(/\s+/g,' ').trim()
+                                                    : ordered(k).map(i => i.s).join(' ').replace(/\s+/g,' ').trim();
+    const one = k => { const l = ordered(k); return l.length ? l[0].s : ''; };
+    const veh = txt('vehicle').replace(/(?<=[A-Za-z0-9])-\s+(?=\d)/g,'-');
+    const dtm = txt('dt').replace(/(\d{2}\/\d{2}\/\d{3}) (\d)(?= \d{1,2}:\d{2})/,'$1$2').match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{1,2}):(\d{2})\s*([AP]M)/);
+    let hh = dtm ? parseInt(dtm[4],10) : 0; if (dtm){ if (dtm[6]==='AM' && hh===12) hh = 0; else if (dtm[6]==='PM' && hh<12) hh += 12; }
+    // Emp Id + Emp Name share one text region -> drop the leading Emp Id (it is the vehicle no) to leave the vehicle type
+    let emp = txt('emp');
+    const vk = normVeh(veh);
+    if (vk){ const pat = new RegExp('^' + vk.split('').map(ch => ch.replace(/[^A-Z0-9]/g,'')).filter(Boolean).join('[\\s-]*') + '\\b[\\s-]*', 'i'); const m2 = emp.match(pat); if (m2) emp = emp.slice(m2[0].length).trim(); }
+    if (emp === txt('emp')) emp = emp.replace(/^[A-Z0-9]{1,4}-\s?\d{2,6}\s+/,'').trim();
+    let station = txt('station').replace(/\b([A-Za-z]{4,}) ([a-z]{1,2})\b(?= [A-Z])/g,'$1$2').trim();
+    const office = txt('office');
+    return {
+      depot: office, no: r.seq, vehicle: veh, vehicleKey: normVeh(veh),
+      fuel: txt('fuel'), liters: n(one('fillL')), shift: '', area: txt('cc2') || '-', voucher: r.seq,
+      date: dtm ? `${dtm[3]}-${dtm[2]}-${dtm[1]}` : '', time: dtm ? `${String(hh).padStart(2,'0')}:${dtm[5]}` : '00:00',
+      station, status: one('status'), mileage: one('mileage') !== '' && !isNaN(n(one('mileage'))) ? n(one('mileage')) : null,
+      amount: n(one('fillA')) || 0, payable: n(one('payable')) || 0, ppl: n(one('ppl')) || 0,
+      cardNo: txt('card'), empName: txt('emp'), vehicleType: emp, division: txt('division'),
+      sourceFile, sheetName: 'Mobitel OneFuel'
+    };
+  }).filter(r => r.vehicle && isFinite(r.liters));
+
+  const rows = all.filter(r => String(r.status).toUpperCase() === 'ACT');
+  const skipped = all.filter(r => String(r.status).toUpperCase() !== 'ACT');
+  if (skipped.length) warnings.push(`${skipped.length} non-ACT transaction(s) ignored (${skipped.map(r=>r.vehicle+' '+r.status).join(', ')})`);
+  const t = String(fullText||'').replace(/\s+/g,' ');
+  const fn = t.match(/Total Number of Transactions\s*:\s*(\d+)/), fl = t.match(/Total Fill Up Litres\s*:\s*([\d,]+\.\d+)/);
+  const sumL = all.reduce((a,r)=>a+r.liters,0); let ok = true;
+  if (fn && +fn[1] !== all.length){ ok = false; warnings.push(`report footer says ${fn[1]} transactions but ${all.length} were read — check the PDF`); }
+  if (fl && Math.abs(n(fl[1]) - sumL) > 0.05){ ok = false; warnings.push(`report footer says ${n(fl[1]).toFixed(3)} L but ${sumL.toFixed(3)} L were read — check the PDF`); }
+  return { rows, all, warnings, footerOk: ok };
+}
+
+/* Position-based reader first; if its totals disagree with the report footer, try the text reader and keep whichever agrees */
+function parseMobitelPdf(data, sourceFile){
+  const a = parseMobitelItems(data.pages || [], data.text, sourceFile);
+  if (a.rows.length && a.footerOk) return { rows: a.rows, warnings: a.warnings };
+  const b = parseMobitelText(data.text, sourceFile);
+  const bOk = b.rows.length && !b.warnings.some(w => /footer says/.test(w));
+  if (bOk) return b;
+  return a.rows.length ? { rows: a.rows, warnings: a.warnings } : b;
+}
+
+/* ============================================================
+   MOBITEL ONEFUEL "TRANSACTION REPORT" (PDF) PARSER
+   One row per ACT transaction. Fields kept: vehicle, litres, date, 24h time,
+   office (shown as Area), station, mileage, amount, card no, device seq no.
+   The report has no shift column, so shift stays blank (date window = D-1, D, D+1).
+   ============================================================ */
+function parseMobitelText(text, sourceFile){
+  const warnings = [];
+  let t = String(text||'').replace(/\s+/g,' ').trim();
+  // pdf.js quirks: wrapped cells and glued text
+  t = t.replace(/(\d{2}\/\d{2}\/\d{3}) (\d)(?= \d{1,2}:\d{2})/g,'$1$2');   // "03/11/202 6" -> "03/11/2026"
+  t = t.replace(/\b([A-Z0-9]{1,4})-\s+(\d{2,6})\b/g,'$1-$2');             // "227- 8834"  -> "227-8834" (vehicle no wrapped over 2 lines)
+  t = t.replace(/(\d)(?=[A-Z]{1,3}-\d)/g,'$1 ').replace(/(\d)(?=Station\b)/g,'$1 '); // "3LO-4830", "26291Station"
+  const n = v => parseFloat(String(v).replace(/,/g,''));
+  const VEH = '[A-Z0-9]{1,4}-\\d{2,6}';
+  // HEAD = the columns whose order never changes: EmpId, EmpName+Division+Office, CardNo, VehicleNo, Fuel, PPL, Fill L, Excess L, ExAmt, Date, Time, Status
+  const reHead = new RegExp(
+    '('+VEH+')\\s+([A-Za-z][A-Za-z0-9 &\'/()-]*?)\\s+(\\d{4} \\d{4} \\d{4} \\d{4})\\s+('+VEH+')\\s+([A-Za-z]+)\\s+' +
+    '([\\d,]+\\.\\d+)\\s+([\\d,]+\\.\\d+)\\s+([\\d,]+\\.\\d+)\\s+([\\d,]+\\.\\d+)\\s+' +
+    '(\\d{2})\\/(\\d{2})\\/(\\d{4})\\s+(\\d{1,2}):(\\d{2})\\s*([AP]M)\\s+(\\w+)','g');
+  const heads = []; let m;
+  while ((m = reHead.exec(t)) !== null) heads.push({ m, start: m.index, end: reHead.lastIndex });
+  const eor = t.search(/\*\*\*\s*End of Report/);
+
+  const all = heads.map((h, i) => {
+    const m = h.m;
+    // TAIL = station + amounts + cost centres + device seq + device id + mileage (their order changes with the cost-centre values,
+    // so read them by shape, not by position)
+    let tail = t.slice(h.end, i + 1 < heads.length ? heads[i+1].start : (eor >= 0 ? eor : t.length));
+    const money = tail.match(/[\d,]+\.\d{2}(?!\d)/g) || [];
+    const seqM = tail.match(/(?<![\d.,])(\d{8,})(?![\d.,])/);
+    const afterSeq = seqM ? tail.slice(tail.indexOf(seqM[1]) + seqM[1].length) : '';
+    const ints = afterSeq.split(' ').filter(x => /^\d+$/.test(x));      // [deviceId, (cost centre 0), mileage ...]
+    let station = (tail.match(/^\s*(.*?)\s*(?=[\d,]+\.\d{2}(?!\d)|(?<![\d.,])\d{8,}(?![\d.,])|$)/) || [,''])[1]
+                    .replace(/\b([A-Za-z]{4,}) ([a-z]{1,2})\b(?= [A-Z])/g,'$1$2').trim();
+    if (/Filling$/.test(station)) station += ' Station';
+    let hh = parseInt(m[13],10); const ap = m[15].toUpperCase();
+    if (ap === 'AM' && hh === 12) hh = 0; else if (ap === 'PM' && hh < 12) hh += 12;
+    const mid = m[2].trim().split(' ');
+    const office = mid.length >= 3 ? mid[mid.length-1] : '';
+    const division = mid.length >= 3 ? mid[mid.length-2] : '';
+    const vehType = mid.length >= 3 ? mid.slice(0, mid.length-2).join(' ') : m[2].trim();
+    const seq = seqM ? seqM[1] : (m[4] + '|' + m[10]+m[11]+m[12] + m[13]+m[14]);
+    return {
+      depot: office, no: seq, vehicle: m[4].trim(), vehicleKey: normVeh(m[4]),
+      fuel: m[5].trim(), liters: n(m[7]), shift: '',
+      area: '-', voucher: seq,
+      date: `${m[12]}-${m[11]}-${m[10]}`, time: `${String(hh).padStart(2,'0')}:${m[14]}`,
+      station, status: m[16], mileage: ints.length > 1 ? n(ints[ints.length-1]) : null,
+      amount: money.length ? n(money[0]) : 0, payable: money.length ? n(money[money.length-1]) : 0, ppl: n(m[6]),
+      cardNo: m[3], empName: m[1], vehicleType: vehType, division,
+      sourceFile, sheetName: 'Mobitel OneFuel'
+    };
+  });
+
+  const rows = all.filter(r => String(r.status).toUpperCase() === 'ACT');
+  const skipped = all.filter(r => String(r.status).toUpperCase() !== 'ACT');
+  if (skipped.length) warnings.push(`${skipped.length} non-ACT transaction(s) ignored (${skipped.map(r=>r.vehicle+' '+r.status).join(', ')})`);
+
+  // reconcile with the report footer
+  const fn = t.match(/Total Number of Transactions\s*:\s*(\d+)/);
+  const fl = t.match(/Total Fill Up Litres\s*:\s*([\d,]+\.\d+)/);
+  const sumL = all.reduce((a,r)=>a+r.liters,0);
+  if (fn && +fn[1] !== all.length) warnings.push(`report footer says ${fn[1]} transactions but ${all.length} were read — check the PDF`);
+  if (fl && Math.abs(n(fl[1]) - sumL) > 0.05) warnings.push(`report footer says ${n(fl[1]).toFixed(3)} L but ${sumL.toFixed(3)} L were read — check the PDF`);
+  return { rows, warnings };
+}
+
+document.getElementById('cardFile').addEventListener('change', handleCardUpload);
+document.getElementById('gpsFile').addEventListener('change', handleGpsUpload);
+
+async function handleCardUpload(ev){
+  const files = Array.from(ev.target.files || []);
+  if (!files.length) return;
+  cardRows = []; allocations = {}; offlineReasons = {};
+  const fileNames = [];
+  setAlert('Reading ' + files.length + ' fuel-card file(s)…', 'info');
+
+  const warnings = [];
+  const seenTxn = new Set();
+  for (const file of files){
+    try {
+      const isPdf = /\.pdf$/i.test(file.name) || file.type === 'application/pdf';
+      let rows;
+      if (isPdf){
+        const res = parseMobitelPdf(await extractPdfData(file), file.name);
+        rows = res.rows.filter(r => { if (seenTxn.has(r.no)) return false; seenTxn.add(r.no); return true; });   // same transaction in 2 PDFs
+        res.warnings.forEach(w => warnings.push(file.name + ': ' + w));
+        if (!res.rows.length) warnings.push(file.name + ': no Mobitel OneFuel transactions recognised — is this the "Transaction Report" PDF?');
+      } else {
+        const buf = await file.arrayBuffer();
+        const wb = XLSX.read(new Uint8Array(buf), {type:'array'});
+        rows = parseCardWorkbook(wb, file.name);
+      }
+      rows.forEach(r => cardRows.push(r));
+      fileNames.push(`${file.name} (${rows.length}${isPdf?' · Mobitel PDF':''})`);
+    } catch(e){ console.warn('Card file read failed', file.name, e); warnings.push(file.name + ': could not be read'); }
+  }
+
+  cardRows.forEach((r,i) => { r.id = 'C' + (i+1); r.idx = i + 1; });
+  document.getElementById('cardStatus').textContent = `✓ ${cardRows.length} entries from ${files.length} file(s)`;
+  document.getElementById('cardFileList').innerHTML = fileNames.map(n => `<span class="f">${esc(n)}</span>`).join('');
+  document.getElementById('cardBox').classList.toggle('loaded', cardRows.length > 0);
+
+  renderCardStats(); renderAllocTable(); renderOfflineSection(); renderReport();
+  setAlert(`Card: ${cardRows.length} entries, ${new Set(cardRows.map(r=>r.vehicleKey)).size} distinct vehicles, ${files.length} file(s).` + (warnings.length ? '  ⚠ ' + warnings.join(' | ') : ''), warnings.length ? 'warn' : 'ok');
+}
+
+function renderCardStats(){
+  if (!cardRows.length){
+    document.getElementById('cardStats').innerHTML = '<div class="stat"><div class="num">0</div><div class="label">No card rows</div></div>';
+    return;
+  }
+  const total = cardRows.reduce((s,r)=>s+r.liters,0);
+  const veh = new Set(cardRows.map(r=>r.vehicleKey)).size;
+  const dates = [...new Set(cardRows.map(r=>r.date).filter(Boolean))].sort();
+  const dateLabel = dates.length === 1 ? dates[0] : (dates.length ? `${dates[0]} → ${dates[dates.length-1]} (${dates.length}d)` : '-');
+  document.getElementById('cardStats').innerHTML = `
+    <div class="stat"><div class="num">${cardRows.length}</div><div class="label">Card entries</div></div>
+    <div class="stat green"><div class="num">${veh}</div><div class="label">Distinct vehicles</div></div>
+    <div class="stat"><div class="num">${total.toFixed(2)}</div><div class="label">Total litres (card)</div></div>
+    <div class="stat amber"><div class="num">${esc(dateLabel)}</div><div class="label">Fuel date(s)</div></div>`;
+}
+
+/* ============================================================
+   GPS PDF PARSER
+   ============================================================ */
+async function extractPdfText(file){
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({data:buf}).promise;
+  let text = '';
+  for (let p=1; p<=pdf.numPages; p++){
+    const page = await pdf.getPage(p);
+    const content = await page.getTextContent();
+    text += content.items.map(it => it.str).join(' ') + '\n';
+  }
+  return text;
+}
+
+async function extractPdfData(file){
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({data:buf}).promise;
+  let text = ''; const pages = [];
+  for (let p=1; p<=pdf.numPages; p++){
+    const page = await pdf.getPage(p);
+    const content = await page.getTextContent();
+    text += content.items.map(it => it.str).join(' ') + '\n';
+    pages.push(content.items.filter(it => it.str && it.str.trim())
+      .map(it => ({ s: it.str.trim(), x: it.transform[4], y: it.transform[5], w: it.width || 0 })));
+  }
+  return { text, pages };
+}
+
+function parseGpsText(text, sourceFile){
+  // pdf.js drops the repeated column header INSIDE a row that starts a new page
+  // ("№ 26.2 Grouping LP-8633 Time <date> <time> Location <loc> Filled 5.26 l") -> rebuild it as a normal row
+  text = text.replace(/Page\s+\d+\s+of\s+\d+/g, ' ')
+    .replace(/№\s+(\d+\.\d+)\s+Grouping\s+([\s\S]*?)\s+Time\s+(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2})\s+Location\s+([\s\S]*?)\s+Filled\s+(\d+(?:\.\d+)?\s*l)/g,
+             ' $1 $2 $3 $4 $5 $6 ');
+  let t = text.replace(/([A-Za-z])(\d)/g, '$1 $2').replace(/(\d)([A-Za-z])/g, '$1 $2');
+  t = t.replace(/\s+/g, ' ').trim();
+  const re = /(\d+\.\d+)\s+([A-Z0-9]{1,4}-\d{2,6})\s*([\s\S]*?)\s*(\d{4}-\d{2}-\d{2})\s*(\d{2}:\d{2}:\d{2})\s*([\s\S]*?)\s+(\d+\.\d{1,2})\b/g;
+  const rows = [];
+  let m;
+  while ((m = re.exec(t)) !== null){
+    const no = m[1];
+    if (!no.includes('.')) continue;
+    rows.push({
+      no, vehicle: m[2].trim(), vehicleKey: normVeh(m[2]),
+      description: m[3].trim().replace(/\s+/g,' '),
+      date: m[4], time: m[5].slice(0,5),
+      location: m[6].trim().replace(/\s+/g,' ').replace(/[,\s]+$/,''),
+      liters: parseFloat(m[7]), sourceFile
+    });
+  }
+  return rows;
+}
+
+function gpsFooterTotal(text){
+  const m = String(text||'').replace(/\s+/g,' ').match(/-{3,}\s*Total[\s\S]*?(\d[\d,]*\.\d{2})\s*l\b/);
+  return m ? parseFloat(m[1].replace(/,/g,'')) : null;
+}
+
+async function handleGpsUpload(ev){
+  const files = Array.from(ev.target.files || []);
+  if (!files.length) return;
+  gpsRows = []; allocations = {}; offlineReasons = {};
+  setAlert('Reading ' + files.length + ' PDF file(s)…', 'info');
+  const fileNames = [];
+  const gpsWarnings = [];
+
+  for (const file of files){
+    try {
+      const text = await extractPdfText(file);
+      const rows = parseGpsText(text, file.name);
+      const foot = gpsFooterTotal(text), got = rows.reduce((a,r)=>a+r.liters,0);
+      if (foot != null && Math.abs(foot - got) > 0.1) gpsWarnings.push(`${file.name}: report total ${foot.toFixed(2)} L but ${got.toFixed(2)} L read — a row may be missing`);
+      rows.forEach(r => gpsRows.push(r));
+      fileNames.push(`${file.name} (${rows.length})`);
+    } catch(e){ console.warn('PDF read failed', file.name, e); }
+  }
+
+  const seen = new Set(); const unique = [];
+  for (const r of gpsRows){
+    const k = r.vehicleKey+'|'+r.date+'|'+r.time+'|'+r.liters+'|'+r.location;
+    if (seen.has(k)) continue;
+    seen.add(k); unique.push(r);
+  }
+  unique.forEach((r,i) => { r.id = 'G' + (i+1); r.idx = i + 1; });
+  gpsRows = unique;
+
+  const onSite = gpsRows.filter(isOnSite).length;
+  const offSite = gpsRows.length - onSite;
+  document.getElementById('gpsStatus').textContent = `✓ ${gpsRows.length} fills (${onSite} on-site, ${offSite} off-site) from ${files.length} file(s)`;
+  document.getElementById('gpsFileList').innerHTML = fileNames.map(n => `<span class="f">${esc(n)}</span>`).join('');
+  document.getElementById('gpsBox').classList.toggle('loaded', gpsRows.length > 0);
+
+  renderAllocTable(); renderOfflineSection(); renderReport();
+  setAlert(`GPS: ${onSite} Sedawatta fills selectable · ${offSite} off-site fills reported separately.` + (gpsWarnings.length ? '  ⚠ ' + gpsWarnings.join(' | ') : ''), gpsWarnings.length ? 'warn' : 'ok');
+}
+
+/* ============================================================
+   SPLIT
+   ============================================================ */
+function vehicleHasOnSiteGps(vehicleKey){
+  return gpsRows.some(g => g.vehicleKey === vehicleKey && isOnSite(g));
+}
+function splitCardEntries(){
+  const withGps = [], withoutGps = [];
+  cardRows.forEach(c => (vehicleHasOnSiteGps(c.vehicleKey) ? withGps : withoutGps).push(c));
+  return { withGps, withoutGps };
+}
+function getCardOnlyEntries(){
+  const entries = [];
+  cardRows.forEach(c => {
+    const allocIds = allocations[c.id] || [];
+    if (allocIds.length) return;
+    entries.push({ card: c, hasGps: vehicleHasOnSiteGps(c.vehicleKey) });
+  });
+  return entries;
+}
+
+/* ============================================================
+   MAIN ALLOCATION TABLE (Area only — no Depot)
+   ============================================================ */
+function renderAllocTable(){
+  const wrap = document.getElementById('allocTableWrap');
+  if (!cardRows.length){ wrap.innerHTML = '<div class="empty-state">Upload fuel-card file(s) to begin.</div>'; return; }
+  if (!gpsRows.length){ wrap.innerHTML = '<div class="empty-state">Upload the GPS PDF file(s) to begin allocating.</div>'; return; }
+
+  const allWithGps = splitCardEntries().withGps;
+  const withGps = showSkipped ? allWithGps : allWithGps.filter(c => !skipped[c.id] || (allocations[c.id]||[]).length);
+  const skippedN = allWithGps.filter(c => skipped[c.id] && !(allocations[c.id]||[]).length).length;
+  if (!allWithGps.length){
+    wrap.innerHTML = '<div class="empty-state">None of the card vehicles have Sedawatta GPS fills in the uploaded PDFs.</div>';
+    return;
+  }
+
+  let html = (skippedN ? `<div style="padding:6px 8px;font-size:12px;color:#64748b;">⏭ ${skippedN} skipped entr${skippedN===1?'y':'ies'} ${showSkipped?'shown':'hidden'} (no fill to allocate) — <a href="#" onclick="toggleSkipped();return false">${showSkipped?'Hide':'Show / restore'}</a></div>` : '') +
+    (withGps.length ? '' : '<div class="empty-state">All remaining entries are skipped or allocated.</div>') +
+    '<table><thead><tr>' +
+    '<th>#</th><th>Card Date &amp; Time</th><th>Vehicle</th><th>Vehicle Type</th><th>Shift</th><th>Area</th><th>Fuel</th>' +
+    '<th class="num">Card L</th>' +
+    '<th>Allocated GPS fills (Date &amp; Time)</th>' +
+    '<th class="num">GPS L</th>' +
+    '<th class="num">Variance</th>' +
+    '<th>Status</th>' +
+    '<th>Actions</th>' +
+    '</tr></thead><tbody>';
+
+  withGps.forEach(c => {
+    const allocIds = allocations[c.id] || [];
+    const allocs = allocIds.map(id => gpsRows.find(g => g.id === id)).filter(Boolean);
+    const gpsTotal = allocs.reduce((s,g)=>s+g.liters,0);
+    const variance = allocs.length ? +(gpsTotal - c.liters).toFixed(2) : null;
+    const pct = (c.liters && allocs.length) ? +((variance / c.liters) * 100).toFixed(1) : null;
+    const within = variance != null && Math.abs(variance) <= VARIANCE_TOLERANCE_L;
+
+    let status;
+    if (!allocs.length) status = '<span class="badge amber">Not allocated</span>';
+    else if (within) status = '<span class="badge green">OK</span>';
+    else status = '<span class="badge red">Variance</span>';
+    const un = allocs.length ? getUnusual(c, variance) : null;
+    if (un) status += ' <span class="badge red" title="' + esc(un.note||'') + '">⚠ Unusual' + (un.auto ? ' (auto)' : '') + '</span>';
+
+    let tagHtml = allocs.length
+      ? allocs.map(g => `<span class="gps-tag" title="${esc(g.location)}">${esc(g.date)} <span class="t">${esc(g.time)}</span> · ${g.liters.toFixed(2)}L</span>`).join(' ')
+      : '<span style="color:#94a3b8;font-size:11.5px;">— none —</span>';
+
+    if (skipped[c.id] && !allocs.length) status = '<span class="badge grey">Skipped</span>';
+    const canPick = allocs.length > 0 || hasSelectableFills(c);
+    if (!allocs.length && !canPick) status = '<span class="badge grey">No free fills</span>';
+    const searchKey = (c.vehicle+' '+c.area+' '+c.shift+' '+c.fuel+' '+c.date+' '+(c.station||'')+' '+(c.vehicleType||'')).toLowerCase();
+
+    html += `<tr data-card="${c.id}" data-search="${esc(searchKey)}" data-allocated="${allocs.length?'1':'0'}">
+      <td>${c.idx}</td>
+      <td style="white-space:nowrap;">${esc(fmtDT(c.date, c.time))}</td>
+      <td><b title="${esc(cardTip(c))}">${esc(c.vehicle)}</b></td>
+      <td>${esc(vtype(c))}</td>
+      <td>${esc(c.shift || '-')}</td>
+      <td>${esc(c.area)}</td>
+      <td>${esc(c.fuel)}</td>
+      <td class="num">${c.liters.toFixed(2)}</td>
+      <td>${tagHtml}</td>
+      <td class="num">${allocs.length?gpsTotal.toFixed(2):'-'}</td>
+      <td class="num">${variance!=null?(variance>=0?'+':'')+variance.toFixed(2)+' L':'-'}</td>
+      <td>${status}</td>
+      <td>
+        ${(skipped[c.id] && !allocs.length) ? `<button class="btn-clear" onclick="unskipCard('${c.id}')">Restore</button>`
+          : canPick ? `<button class="btn-alloc" onclick="openGpsModal('${c.id}')">${allocs.length?'Edit':'+ Allocate'}</button>${allocs.length?'':` <button class="btn-clear" onclick="skipCard('${c.id}')">Skip</button>`}`
+                  : '<span style="color:#94a3b8;font-size:11.5px;">nothing to select</span>'}
+        ${allocs.length?`<button class="btn-clear" onclick="clearCardAllocation('${c.id}')">Clear</button>`:''}
+      </td>
+    </tr>`;
+  });
+
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+  filterAllocTable();
+}
+
+function cardTip(c){
+  if (c.sheetName !== 'Mobitel OneFuel') return '';
+  return `${c.vehicleType||''} · Office: ${c.depot||'-'} · Cost Center 2: ${c.area||'-'} · Station: ${c.station||'-'} · Mileage: ${c.mileage!=null?c.mileage+' km':'-'} · Amount: Rs.${(c.payable||0).toLocaleString('en-LK',{minimumFractionDigits:2})} · Txn ${c.no} · Card ${c.cardNo}`;
+}
+
+function filterAllocTable(){
+  const q = (document.getElementById('allocSearch').value || '').toLowerCase().trim();
+  const onlyUnalloc = document.getElementById('onlyUnallocated').checked;
+  document.querySelectorAll('#allocTableWrap tbody tr').forEach(tr => {
+    const key = tr.dataset.search || '';
+    const allocated = tr.dataset.allocated === '1';
+    const matches = !q || key.includes(q);
+    const okUnalloc = !onlyUnalloc || !allocated;
+    tr.style.display = (matches && okUnalloc) ? '' : 'none';
+  });
+}
+
+function skipCard(id){ skipped[id] = true; renderAllocTable(); renderReport(); }
+function unskipCard(id){ delete skipped[id]; renderAllocTable(); renderReport(); }
+function toggleSkipped(){ showSkipped = !showSkipped; renderAllocTable(); }
+function skipModal(){
+  const id = currentCardId; closeGpsModal();
+  if (id && !(allocations[id]||[]).length) skipCard(id);   // nothing allocated -> hide from Step 2
+}
+function clearCardAllocation(cardId){
+  delete allocations[cardId]; delete unusual[cardId];
+  renderAllocTable(); renderOfflineSection(); renderReport();
+}
+
+function resetAll(){
+  cardRows = []; gpsRows = []; allocations = {}; offlineReasons = {}; unusual = {}; skipped = {}; showSkipped = false; currentCardId = null; abnormalItems = null; abnormalEdited = false;
+  document.getElementById('cardStatus').textContent = 'No file selected';
+  document.getElementById('gpsStatus').textContent = 'No file selected';
+  document.getElementById('cardFileList').innerHTML = '';
+  document.getElementById('gpsFileList').innerHTML = '';
+  document.getElementById('cardBox').classList.remove('loaded');
+  document.getElementById('gpsBox').classList.remove('loaded');
+  document.getElementById('cardFile').value = '';
+  document.getElementById('gpsFile').value = '';
+  document.getElementById('allocSearch').value = '';
+  document.getElementById('onlyUnallocated').checked = false;
+  setAlert('');
+  renderCardStats(); renderAllocTable(); renderOfflineSection();
+  document.getElementById('reportArea').innerHTML = '';
+}
+
+/* ============================================================
+   "ON CARD, NOT ON GPS" — classify table
+   ============================================================ */
+function renderOfflineSection(){
+  const card = document.getElementById('offlineCard');
+  const wrap = document.getElementById('offlineTableWrap');
+  if (!cardRows.length || !gpsRows.length){ card.style.display = 'none'; return; }
+
+  const entries = getCardOnlyEntries();
+  if (!entries.length){ card.style.display = 'none'; return; }
+  card.style.display = 'block';
+
+  let html = '<table><thead><tr>' +
+    '<th>#</th><th>Card Date &amp; Time</th><th>Vehicle</th><th>Vehicle Type</th><th>Area</th><th>Shift</th><th>Fuel</th>' +
+    '<th class="num">Card L</th>' +
+    '<th>GPS availability</th>' +
+    '<th>Reason (category &amp; detail)</th>' +
+    '</tr></thead><tbody>';
+
+  entries.forEach(({ card: c, hasGps }) => {
+    const reason = getReason(c.id);
+    const avail = hasGps
+      ? '<span class="badge blue">GPS fills available — not allocated</span>'
+      : '<span class="badge grey">No GPS fills in PDF</span>';
+
+    const optionsHtml = ['<option value="">— Select —</option>']
+      .concat(OFFLINE_CATEGORIES.map(cat =>
+        `<option value="${esc(cat)}" ${reason.category === cat ? 'selected' : ''}>${esc(cat)}</option>`))
+      .join('');
+
+    const detailShown = reason.category === 'Other' ? 'show' : '';
+
+    html += `<tr>
+      <td>${c.idx}</td>
+      <td style="white-space:nowrap;">${esc(fmtDT(c.date, c.time))}</td>
+      <td><b>${esc(c.vehicle)}</b></td>
+      <td>${esc(vtype(c))}</td>
+      <td>${esc(c.area)}</td>
+      <td>${esc(c.shift)}</td>
+      <td>${esc(c.fuel)}</td>
+      <td class="num">${c.liters.toFixed(2)}</td>
+      <td>${avail}</td>
+      <td>
+        <select class="offline-category" data-card-id="${c.id}" onchange="saveOfflineCategory(this)">${optionsHtml}</select>
+        <input type="text" class="offline-detail ${detailShown}" data-card-id="${c.id}" placeholder="Specify reason…" value="${esc(reason.detail)}" oninput="saveOfflineDetail(this)">
+      </td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
+function saveOfflineCategory(sel){
+  const id = sel.dataset.cardId;
+  const v = sel.value;
+  if (!offlineReasons[id]) offlineReasons[id] = { category:'', detail:'' };
+  offlineReasons[id].category = v;
+  const row = sel.closest('tr');
+  const detail = row.querySelector('.offline-detail');
+  if (detail){
+    if (v === 'Other'){ detail.classList.add('show'); }
+    else { detail.classList.remove('show'); detail.value = ''; offlineReasons[id].detail = ''; }
+  }
+  renderReport();
+}
+function saveOfflineDetail(inp){
+  const id = inp.dataset.cardId;
+  if (!offlineReasons[id]) offlineReasons[id] = { category:'', detail:'' };
+  offlineReasons[id].detail = inp.value;
+  renderReport();
+}
+
+/* ============================================================
+   GPS ALLOCATION MODAL (shift-aware + reserved)
+   ============================================================ */
+function hasSelectableFills(card){
+  const taken = new Set();
+  Object.keys(allocations).forEach(k => { if (k !== card.id) allocations[k].forEach(id => taken.add(id)); });
+  const pred = shiftPredictedDates(card);
+  const onlyPred = document.getElementById('preferSameShift').checked;
+  return gpsRows.some(g => g.vehicleKey === card.vehicleKey && isOnSite(g) && !taken.has(g.id)
+                           && (!onlyPred || pred.indexOf(g.date) >= 0));
+}
+function openGpsModal(cardId){
+  if (!gpsRows.length){ alert('Please upload GPS PDF(s) first.'); return; }
+  const card = cardRows.find(c => c.id === cardId);
+  if (!card) return;
+  currentCardId = cardId;
+  document.getElementById('gpsModalTitle').textContent = `Allocate GPS fills — ${card.vehicle}${card.vehicleType ? ' ('+card.vehicleType+')' : ''}`;
+
+  const reservedBy = {};
+  Object.keys(allocations).forEach(k => {
+    allocations[k].forEach(id => { if (k !== cardId) reservedBy[id] = k; });
+  });
+
+  const currently = new Set(allocations[cardId] || []);
+  const predicted = shiftPredictedDates(card);
+  const filterShift = document.getElementById('preferSameShift').checked;
+
+  let candidates = gpsRows.filter(g => g.vehicleKey === card.vehicleKey && isOnSite(g));
+  candidates.sort((a,b) => {
+    const pa = predicted.indexOf(a.date), pb = predicted.indexOf(b.date);
+    const ra = pa >= 0 ? pa : 100 + Math.abs(dateDiffDays(a.date, card.date));
+    const rb = pb >= 0 ? pb : 100 + Math.abs(dateDiffDays(b.date, card.date));
+    if (ra !== rb) return ra - rb;
+    return (a.date+' '+a.time).localeCompare(b.date+' '+b.time);
+  });
+
+  if (filterShift) candidates = candidates.filter(g => predicted.indexOf(g.date) >= 0);
+
+  const tbody = document.getElementById('gpsModalBody');
+  if (!candidates.length){
+    tbody.innerHTML = `<tr><td colspan="7" class="empty-state">No Sedawatta GPS fills available for vehicle <b>${esc(card.vehicle)}</b>${filterShift?' within predicted dates ('+predicted.join(', ')+')':''}.</td></tr>`;
+  } else {
+    tbody.innerHTML = candidates.map(g => {
+      const isReserved = !!reservedBy[g.id];
+      const reservedCard = isReserved ? cardRows.find(x => x.id === reservedBy[g.id]) : null;
+      const isPredicted = predicted.indexOf(g.date) >= 0;
+      const checked = currently.has(g.id) ? 'checked' : '';
+      const disabled = isReserved ? 'disabled' : '';
+      const tagDate = isPredicted ? '' : ' <span class="badge grey">other date</span>';
+      const tagResv = isReserved ? ` <span class="badge blue">Allocated → #${esc(reservedCard?reservedCard.idx:'?')} ${esc(reservedCard?reservedCard.vehicle:'')}</span>` : '';
+      const rowCls = isReserved ? 'gps-row reserved-row' : 'gps-row';
+      const key = (g.date+' '+g.time+' '+g.vehicle+' '+g.location).toLowerCase();
+      return `<tr class="${rowCls}" data-search="${esc(key)}">
+        <td><input type="checkbox" class="gps-checkbox" value="${g.id}" ${checked} ${disabled} onchange="updateModalCount()"></td>
+        <td>${esc(g.no)}</td>
+        <td>${esc(g.date)}${tagDate}${tagResv}</td>
+        <td>${esc(g.time)}</td>
+        <td><b>${esc(g.vehicle)}</b><div style="font-size:10px;color:#94a3b8;">${esc(g.description||'')}</div></td>
+        <td class="num">${g.liters.toFixed(2)}</td>
+        <td>${esc(g.location)}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  const ub = document.getElementById('unusualBox');
+  const selectable = candidates.some(g => !reservedBy[g.id]);
+  ub.style.display = selectable ? '' : 'none';              // nothing to select -> option skipped
+  document.querySelector('.btn-save').style.display = selectable ? '' : 'none';
+  const mu = unusual[cardId];
+  unusualTouched = !!mu;                                                  // a saved choice (incl. opt-out) is respected
+  document.getElementById('unusualChk').checked = !!(mu && !mu.off);
+  document.getElementById('unusualNote').value = (mu && !mu.off) ? (mu.note || '') : '';
+  document.getElementById('gpsModal').classList.add('show');
+  document.getElementById('gpsSearch').value = '';
+  updateModalCount();
+}
+
+function syncUnusualBox(){
+  const boxes = Array.from(document.querySelectorAll('.gps-checkbox:not([disabled]):checked'));
+  const n = boxes.length;
+  const chk = document.getElementById('unusualChk');
+  chk.disabled = n === 0;
+  if (n === 0) chk.checked = false;
+  else if (!unusualTouched){                                              // auto-tick when selected GPS litres differ from the card by > 5 L
+    const card = cardRows.find(c => c.id === currentCardId);
+    const litres = boxes.reduce((a, cb) => { const g = gpsRows.find(x => x.id === cb.value); return a + (g ? g.liters : 0); }, 0);
+    chk.checked = !!card && Math.abs(litres - card.liters) > UNUSUAL_VARIANCE_L;
+  }
+  document.getElementById('unusualNote').style.display = chk.checked ? '' : 'none';
+  document.getElementById('unusualOff').style.display = n === 0 ? '' : 'none';
+}
+function updateModalCount(){
+  const boxes = document.querySelectorAll('.gps-checkbox:not([disabled])');
+  let total = 0, litres = 0;
+  boxes.forEach(cb => {
+    if (cb.checked){
+      total++;
+      const g = gpsRows.find(x => x.id === cb.value);
+      if (g) litres += g.liters;
+    }
+  });
+  const sub = document.getElementById('gpsModalSubtitle');
+  const card = cardRows.find(c => c.id === currentCardId);
+  if (card){
+    const pred = shiftPredictedDates(card).join(' / ');
+    syncUnusualBox();
+    sub.textContent = `Card #${card.idx} · Card date & time: ${fmtDT(card.date, card.time)} · Shift ${card.shift||'-'} · ${card.liters.toFixed(2)} L (${card.fuel}) · Predicted GPS date(s): ${pred} · Selected: ${total} fill(s), ${litres.toFixed(2)} L`;
+  }
+}
+
+function toggleSelectAllGps(master){
+  document.querySelectorAll('#gpsModalBody tr.gps-row').forEach(tr => {
+    if (tr.style.display === 'none') return;
+    const cb = tr.querySelector('.gps-checkbox');
+    if (cb && !cb.disabled) cb.checked = master.checked;
+  });
+  updateModalCount();
+}
+function filterGpsModalRows(){
+  const q = (document.getElementById('gpsSearch').value || '').toLowerCase().trim();
+  document.querySelectorAll('#gpsModalBody tr.gps-row').forEach(tr => {
+    tr.style.display = (!q || (tr.dataset.search||'').includes(q)) ? '' : 'none';
+  });
+}
+function saveGpsAllocation(){
+  if (!currentCardId) return;
+  const checked = Array.from(document.querySelectorAll('.gps-checkbox:checked')).map(cb => cb.value);
+  if (checked.length){ allocations[currentCardId] = checked; delete skipped[currentCardId]; }
+  else delete allocations[currentCardId];
+  const cardNow = cardRows.find(c => c.id === currentCardId);
+  const litresNow = checked.reduce((a, id) => { const g = gpsRows.find(x => x.id === id); return a + (g ? g.liters : 0); }, 0);
+  const bigVar = !!cardNow && Math.abs(litresNow - cardNow.liters) > UNUSUAL_VARIANCE_L;
+  if (checked.length && document.getElementById('unusualChk').checked)
+    unusual[currentCardId] = { note: document.getElementById('unusualNote').value.trim() };
+  else if (checked.length && bigVar) unusual[currentCardId] = { note: '', off: true };   // user cleared the automatic flag
+  else delete unusual[currentCardId];
+  closeGpsModal();
+  renderAllocTable(); renderOfflineSection(); renderReport();
+}
+function closeGpsModal(){ document.getElementById('gpsModal').classList.remove('show'); currentCardId = null; }
+document.getElementById('gpsSearch').addEventListener('input', filterGpsModalRows);
+document.getElementById('preferSameShift').addEventListener('change', renderAllocTable);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeGpsModal(); });
+
+/* ============================================================
+   REPORT DATA
+   ============================================================ */
+function buildReportData(){
+  const allocatedGpsIds = new Set();
+  Object.values(allocations).forEach(arr => arr.forEach(id => allocatedGpsIds.add(id)));
+
+  const matched = [];
+  const cardOnly = [];
+  cardRows.forEach(c => {
+    const allocIds = allocations[c.id] || [];
+    const allocs = allocIds.map(id => gpsRows.find(g => g.id === id)).filter(Boolean);
+    if (allocs.length){
+      const gpsTotal = allocs.reduce((s,g) => s + g.liters, 0);
+      const variance = +(gpsTotal - c.liters).toFixed(2);
+      const pct = c.liters ? +((variance / c.liters) * 100).toFixed(1) : null;
+      const dt = allocs.map(g => g.date+' '+g.time).sort()[0];
+      const locations = [...new Set(allocs.map(g => g.location))].join(' | ');
+      const ok = Math.abs(variance) <= VARIANCE_TOLERANCE_L;
+      matched.push({ unusual: getUnusual(c, variance), card: c, gpsList: allocs, cardL: c.liters, gpsL: gpsTotal, variance, pct, dt, locations, status: ok ? 'ok' : 'mismatch' });
+    } else {
+      const hasGps = vehicleHasOnSiteGps(c.vehicleKey);
+      const reason = getReason(c.id);
+      cardOnly.push({
+        card: c, hasGps, skipped: !!skipped[c.id],
+        note: hasGps ? 'Not allocated' : 'Offline / No GPS tracker',
+        category: reason.category,
+        detail: reason.detail, auto: reason.auto
+      });
+    }
+  });
+
+  const gpsOnlyOnSite = [];
+  const gpsOnlyOffSite = [];
+  gpsRows.forEach(g => {
+    if (allocatedGpsIds.has(g.id)) return;
+    (isOnSite(g) ? gpsOnlyOnSite : gpsOnlyOffSite).push({ gps: g });
+  });
+
+  matched.sort((a,b) => a.dt.localeCompare(b.dt) || a.card.vehicle.localeCompare(b.card.vehicle));
+  cardOnly.sort((a,b) => (a.card.date||'').localeCompare(b.card.date||'') || a.card.vehicle.localeCompare(b.card.vehicle) || a.card.idx - b.card.idx);
+  gpsOnlyOnSite.sort((a,b) => (a.gps.date+' '+a.gps.time).localeCompare(b.gps.date+' '+b.gps.time));
+  gpsOnlyOffSite.sort((a,b) => (a.gps.date+' '+a.gps.time).localeCompare(b.gps.date+' '+b.gps.time));
+
+  const sumCard = arr => arr.reduce((s,r)=>s+r.cardL,0);
+  const sumCardOnly = arr => arr.reduce((s,r)=>s+r.card.liters,0);
+  const sumGps = arr => arr.reduce((s,r)=>s+r.gpsL,0);
+  const sumGpsOnly = arr => arr.reduce((s,r)=>s+r.gps.liters,0);
+
+  const grandCard = sumCard(matched) + sumCardOnly(cardOnly);
+  const grandGps  = sumGps(matched) + sumGpsOnly(gpsOnlyOnSite) + sumGpsOnly(gpsOnlyOffSite);
+  const grandVar  = +(grandGps - grandCard).toFixed(2);
+  const grandPct  = grandCard ? +((grandVar / grandCard) * 100).toFixed(1) : null;
+
+  const matchedUnusual = matched.filter(r => r.unusual), matchedNormal = matched.filter(r => !r.unusual);
+  const matchedFlagged = matchedNormal.filter(r => r.status === 'mismatch')
+    .sort((a,b) => Math.abs(b.variance) - Math.abs(a.variance) || a.dt.localeCompare(b.dt));
+  const matchedOk = matchedNormal.filter(r => r.status === 'ok');
+  return { matched, matchedNormal, matchedUnusual, matchedFlagged, matchedOk, cardOnly, gpsOnlyOnSite, gpsOnlyOffSite, grandCard, grandGps, grandVar, grandPct };
+}
+
+/* ---------- grouping cardOnly by category ---------- */
+function groupCardOnlyByCategory(cardOnly){
+  const order = OFFLINE_CATEGORIES.concat([UNCLASSIFIED_LABEL]);
+  const groups = {};
+  order.forEach(c => groups[c] = []);
+  cardOnly.forEach(r => {
+    const cat = r.category && order.indexOf(r.category) >= 0 ? r.category : UNCLASSIFIED_LABEL;
+    groups[cat].push(r);
+  });
+  return { order, groups };
+}
+
+/* ---------- row renderers (Area only — no Depot) ---------- */
+function statusBadge(s){
+  if (s==='ok') return '<span class="badge green">OK</span>';
+  if (s==='mismatch') return '<span class="badge red">Mismatch</span>';
+  if (s==='card-missing') return '<span class="badge amber">No card record</span>';
+  return '<span class="badge amber">No GPS record</span>';
+}
+
+function matchedRowHtml(r, forPrint){
+  const c = r.card;
+  const statusCell = r.unusual ? (forPrint ? 'UNUSUAL' : '<span class="badge red">⚠ Unusual</span>')
+    : forPrint ? (r.status === 'ok' ? 'OK' : 'Mismatch') : statusBadge(r.status);
+  const noteCell = r.unusual ? `${r.gpsList.length} fill(s)${r.unusual.note ? ' — ' + esc(r.unusual.note) : ''}` : r.gpsList.length;
+  return `<tr>
+    <td>${esc(fmtDT(c.date, c.time))}</td>
+    <td>${gpsDtList(r.gpsList, '<br>')}</td>
+    <td><b>${esc(c.vehicle)}</b></td>
+    <td>${esc(vtype(c))}</td>
+    <td>${esc(c.shift || '-')}</td>
+    <td>${esc(c.area || '-')}</td>
+    <td>${esc(r.locations || '-')}</td>
+    <td class="num">${r.cardL.toFixed(2)}</td>
+    <td class="num">${r.gpsL.toFixed(2)}</td>
+    <td class="num">${(r.variance>=0?'+':'')+r.variance.toFixed(2)}</td>
+    <td class="num">${r.pct!=null?(r.pct>=0?'+':'')+r.pct+'%':'-'}</td>
+    <td>${statusCell}</td>
+    <td>${noteCell}</td>
+  </tr>`;
+}
+
+function cardOnlyRowHtml(r, forPrint){
+  const c = r.card;
+  const statusCell = forPrint ? 'No GPS record' : statusBadge('gps-missing');
+  const note = r.detail ? r.detail : (r.auto ? 'Auto: tractor / staff / common card — no GPS tracker' : r.hasGps ? (r.skipped ? 'Skipped — no GPS fill to allocate' : 'GPS fills available — not allocated') : 'No GPS fills in PDF');
+  return `<tr>
+    <td>${esc(fmtDT(c.date, c.time))}</td>
+    <td>-</td>
+    <td><b>${esc(c.vehicle)}</b></td>
+    <td>${esc(vtype(c))}</td>
+    <td>${esc(c.shift || '-')}</td>
+    <td>${esc(c.area || '-')}</td>
+    <td>-</td>
+    <td class="num">${c.liters.toFixed(2)}</td>
+    <td class="num">-</td>
+    <td class="num">-</td>
+    <td class="num">-</td>
+    <td>${statusCell}</td>
+    <td>${esc(note)}</td>
+  </tr>`;
+}
+
+function gpsOnlyRowHtml(r, forPrint){
+  const g = r.gps;
+  const off = !isOnSite(g);
+  const locCell = off ? `<span style="color:#a4342a;font-weight:700">⚠ ${esc(g.location)}</span>` : esc(g.location || '-');
+  const statusCell = forPrint ? 'No card record' : statusBadge('card-missing');
+  return `<tr>
+    <td>-</td>
+    <td>${esc(g.date+' '+g.time)}</td>
+    <td><b>${esc(g.vehicle)}</b></td>
+    <td>-</td>
+    <td>-</td>
+    <td>-</td>
+    <td>${locCell}</td>
+    <td class="num">-</td>
+    <td class="num">${g.liters.toFixed(2)}</td>
+    <td class="num">-</td>
+    <td class="num">-</td>
+    <td>${statusCell}</td>
+    <td style="font-size:11px;">${esc(g.description||'')}</td>
+  </tr>`;
+}
+
+function subtotalRow(label, cardT, gpsT, cols){
+  const variance = (cardT != null && gpsT != null) ? +(gpsT - cardT).toFixed(2) : null;
+  const pct = (cardT) ? +((variance / cardT) * 100).toFixed(1) : null;
+  // 13 columns: 7 span on left, 4 numeric, 2 span on right
+  return `<tr class="subtotal-row">
+    <td colspan="7"><b>${esc(label)}</b></td>
+    <td class="num"><b>${cardT!=null?cardT.toFixed(2):'-'}</b></td>
+    <td class="num"><b>${gpsT!=null?gpsT.toFixed(2):'-'}</b></td>
+    <td class="num"><b>${variance!=null?(variance>=0?'+':'')+variance.toFixed(2):'-'}</b></td>
+    <td class="num"><b>${pct!=null?(pct>=0?'+':'')+pct+'%':'-'}</b></td>
+    <td colspan="2"></td>
+  </tr>`;
+}
+
+function tableHead(){
+  return '<thead><tr><th>Card Date &amp; Time</th><th>GPS Date &amp; Time</th><th>Vehicle</th><th>Vehicle Type</th><th>Shift</th><th>Area</th><th>Location(s)</th><th class="num">Pumped (Card)</th><th class="num">Pumped (GPS)</th><th class="num">Variance</th><th class="num">Vari %</th><th>Status</th><th>Note</th></tr></thead><tbody>';
+}
+
+function buildSectionHtml(title, subtitle, rowsHtml, subtotalHtml){
+  const sub = subtitle ? `<div class="sec-sub">${esc(subtitle)}</div>` : '';
+  const body = (rowsHtml && rowsHtml.trim()) ? rowsHtml
+              : `<tr><td colspan="13" style="color:#94a3b8;font-size:12px;padding:12px;">None.</td></tr>`;
+  return `<div class="report-section">
+    <div class="sec-title">${esc(title)}</div>
+    ${sub}
+    <table>${tableHead()}${body}${subtotalHtml||''}</tbody></table>
+  </div>`;
+}
+
+function buildSubSectionHtml(title, rowsHtml, subtotalHtml){
+  const body = (rowsHtml && rowsHtml.trim()) ? rowsHtml
+              : `<tr><td colspan="13" style="color:#94a3b8;font-size:11.5px;padding:8px;">None.</td></tr>`;
+  return `<div class="subsection">
+    <div class="subsec-title">${esc(title)}</div>
+    <table>${tableHead()}${body}${subtotalHtml||''}</tbody></table>
+  </div>`;
+}
+
+function buildSection2Html(forPrint){
+  const d = buildReportData();
+  const { groups } = groupCardOnlyByCategory(d.cardOnly);
+  const total = d.cardOnly.length;
+  const SEC3 = [
+    [UNCLASSIFIED_LABEL, 'Not classified'],
+    ['No GPS Tracker', 'No GPS Tracker — Tractors, Staff & Common'],
+    ['Offline', 'Offline'], ['Not filled', 'Not filled'], ['Staff fuel', 'Staff fuel'], ['Other', 'Other']
+  ];
+  let body = '';
+  SEC3.forEach(([cat, label], i) => {
+    const list = groups[cat] || [];
+    if (!list.length) return;
+    body += buildSubSectionHtml(`3.${i+1} ${label} (${list.length})`,
+      list.map(r => cardOnlyRowHtml(r, forPrint)).join(''),
+      subtotalRow(`Subtotal — ${label}`, list.reduce((s,r)=>s+r.card.liters,0), null));
+  });
+  if (!body) body = `<div class="subsection"><table>${tableHead()}<tr><td colspan="13" style="color:#94a3b8;font-size:12px;padding:12px;">None.</td></tr></tbody></table></div>`;
+  return `<div class="report-section">
+    <div class="sec-title">3. GPS Unavailable &amp; Offline Vehicle List (${total})</div>
+    <div class="sec-sub">Card entries not allocated to any Sedawatta GPS fill. Tractor, staff and common cards are placed under No GPS Tracker automatically.</div>
+    ${body}
+  </div>`;
+}
+
+/* ---------- Time variance (card time vs first GPS fill) ---------- */
+const TIME_MIN_SHOW = 5;
+function timeRisk(mins){ return mins <= 30 ? 'Low' : (mins <= 240 ? 'High' : 'Critical'); }
+function toMs(date, time){
+  const m = String(date||'').match(/^(\d{4})-(\d{2})-(\d{2})$/), t = String(time||'').match(/^(\d{2}):(\d{2})/);
+  if (!m || !t) return null;
+  return Date.UTC(+m[1], +m[2]-1, +m[3], +t[1], +t[2]);
+}
+function buildTimeVarianceRows(d){
+  const rows = [];
+  d.matched.forEach(r => {
+    const c = r.card;
+    if (!c.time || c.time === '00:00') return;            // card has no time of day (e.g. Excel without time)
+    const first = r.gpsList.slice().sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time))[0];
+    const a = toMs(c.date, c.time), b = toMs(first.date, first.time);
+    if (a === null || b === null) return;
+    const mins = Math.round(Math.abs(a-b)/60000);
+    if (mins > TIME_MIN_SHOW) rows.push({ r, first, mins });
+  });
+  return rows.sort((x,y) => y.mins - x.mins);
+}
+function buildTimeSectionHtml(d, forPrint){
+  const rows = buildTimeVarianceRows(d);
+  const body = rows.map(x => {
+    const risk = timeRisk(x.mins);
+    const rc = risk === 'Critical' ? 'red' : (risk === 'High' ? 'amber' : 'green');
+    const riskCell = forPrint ? risk : `<span class="badge ${rc}">${risk}</span>`;
+    return `<tr>
+      <td><b>${esc(x.r.card.vehicle)}</b></td><td>${esc(vtype(x.r.card))}</td>
+      <td>${esc(fmtDT(x.r.card.date, x.r.card.time))}</td><td>${esc(x.first.date+' '+x.first.time)}</td>
+      <td class="num">${x.mins}</td><td>${esc(x.first.location||'-')}</td><td>${riskCell}</td></tr>`;
+  }).join('') || `<tr><td colspan="7" style="color:#94a3b8;font-size:12px;padding:12px;">None.</td></tr>`;
+  return `<div class="report-section">
+    <div class="sec-title">4. Fuel Pump Time Variance GPS &amp; Pump Report — more than ${TIME_MIN_SHOW} min (${rows.length})</div>
+    <div class="sec-sub">Only matched entries where card time and the first GPS fill differ by more than ${TIME_MIN_SHOW} minutes. Risk: Low ≤ 30 min, High ≤ 240 min, Critical above 240 min.</div>
+    <table class="simple"><thead><tr><th>Vehicle</th><th>Vehicle Type</th><th>Card Date &amp; Time</th><th>GPS Date &amp; Time</th><th class="num">Diff (Mins)</th><th>GPS Location</th><th>Risk</th></tr></thead><tbody>${body}</tbody></table>
+  </div>`;
+}
+
+/* ---------- Abnormal highlights ---------- */
+function buildAbnormalRows(d){
+  const out = [];
+  d.matchedUnusual.forEach(r => out.push({ cat:'Unusual filling variance', veh:r.card.vehicle,
+    issue:`Card ${r.cardL.toFixed(2)} L vs GPS ${r.gpsL.toFixed(2)} L, variance ${r.variance > 0 ? '+' : ''}${r.variance.toFixed(2)} L (${r.gpsList.length} fill(s))${r.unusual && r.unusual.note && !r.unusual.auto ? ' — ' + r.unusual.note : ''}`,
+    litres:r.cardL, action: r.unusual && r.unusual.auto ? `Variance above ±${UNUSUAL_VARIANCE_L} L — verify pump receipt, GPS fill and vehicle log` : 'Review remark and supporting documents' }));
+  return out;
+}
+/* editable abnormal list: auto-built until the user edits / adds / removes, then frozen (Reset restores auto) */
+let abnormalItems = null;
+let abnormalEdited = false;
+let abnormalSeq = 0;
+function syncAbnormal(d){
+  if (abnormalItems === null || !abnormalEdited){
+    abnormalItems = buildAbnormalRows(d).map(x => ({ id: ++abnormalSeq, cat:x.cat, veh:x.veh, issue:x.issue, litres:x.litres, action:x.action }));
+  }
+}
+function abEdit(id, field, value){
+  const it = abnormalItems.find(x => x.id === id); if (!it) return;
+  it[field] = field === 'litres' ? (parseFloat(value) || 0) : value;
+  abnormalEdited = true;
+}
+function abRemove(id){ abnormalItems = abnormalItems.filter(x => x.id !== id); abnormalEdited = true; renderReport(); }
+function abAdd(){ abnormalItems.push({ id: ++abnormalSeq, cat:'', veh:'', issue:'', litres:0, action:'' }); abnormalEdited = true; renderReport(); }
+function abReset(){ abnormalItems = null; abnormalEdited = false; renderReport(); }
+
+function buildAbnormalSectionHtml(d, forPrint){
+  syncAbnormal(d);
+  const items = forPrint ? abnormalItems.filter(x => (x.cat||x.veh||x.issue||x.action||x.litres)) : abnormalItems;
+  let body;
+  if (forPrint){
+    body = items.map(x => `<tr><td>${esc(x.cat)}</td><td><b>${esc(x.veh)}</b></td><td>${esc(x.issue)}</td><td class="num">${(+x.litres||0).toFixed(2)}</td><td>${esc(x.action)}</td></tr>`).join('');
+  } else {
+    const inp = (id, f, v, w) => `<input type="text" value="${esc(v)}" style="width:${w||'100%'};box-sizing:border-box;padding:4px 6px;border:1px solid #cbd5e1;border-radius:4px;font:inherit" onchange="abEdit(${id},'${f}',this.value)">`;
+    body = items.map(x => `<tr>
+      <td>${inp(x.id,'cat',x.cat)}</td><td>${inp(x.id,'veh',x.veh)}</td><td>${inp(x.id,'issue',x.issue)}</td>
+      <td>${inp(x.id,'litres',(+x.litres||0).toFixed(2),'80px')}</td><td>${inp(x.id,'action',x.action)}</td>
+      <td><button class="ghost" title="Remove this row" onclick="abRemove(${x.id})">✕</button></td></tr>`).join('');
+  }
+  if (!body) body = `<tr><td colspan="${forPrint?5:6}" style="color:#94a3b8;font-size:12px;padding:12px;">None.</td></tr>`;
+  const tools = forPrint ? '' : `<div style="margin:6px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <button class="primary" onclick="abAdd()">+ Add row</button>
+      <button class="ghost" onclick="abReset()">Reset to auto-detected</button>
+      <span class="hint">Type directly in any cell, or remove a row with ✕. Edited rows are what prints in the PDF.</span></div>`;
+  return `<div class="report-section">
+    <div class="sec-title">7. Abnormal Highlights &amp; Recommendations (${items.length})</div>
+    ${tools}
+    <table class="simple"><thead><tr><th>Category</th><th>Vehicle</th><th>Observed Issue</th><th class="num">Fuel Impact (L)</th><th>Action</th>${forPrint?'':'<th></th>'}</tr></thead><tbody>${body}</tbody></table>
+  </div>`;
+}
+
+/* ---------- Summary sheet (Mobitel card by date & fuel type) ---------- */
+function normFuel(f){
+  const t = String(f||'').toLowerCase();
+  if (/super/.test(t)) return 'Super Diesel';
+  if (/diesel/.test(t)) return 'Diesel';
+  if (/petrol|gasoline|octane|\b9[25]\b/.test(t)) return 'Petrol';
+  return 'Other';
+}
+function buildSummaryHtml(d){
+  const fuels = ['Diesel','Petrol','Super Diesel','Other'];
+  const dates = [...new Set(cardRows.map(c => c.date || '-'))].sort();
+  const agg = {}; let hasAmt = false;
+  cardRows.forEach(c => {
+    const k = (c.date||'-') + '|' + normFuel(c.fuel);
+    const a = agg[k] = agg[k] || { l:0, a:0 };
+    a.l += c.liters; a.a += (+c.amount || 0);
+    if (+c.amount) hasAmt = true;
+  });
+  const hasOther = cardRows.some(c => normFuel(c.fuel) === 'Other');
+  const show = fuels.filter(f => f !== 'Other' || hasOther);
+  const L = v => v ? v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) : '-';
+  const A = v => (hasAmt && v) ? v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) : '-';
+  let rows = '', tl = 0, ta = 0;
+  dates.forEach(dt => {
+    show.forEach((f, i) => {
+      const a = agg[dt+'|'+f] || { l:0, a:0 }; tl += a.l; ta += a.a;
+      rows += `<tr>${i===0 ? `<td rowspan="${show.length}" style="vertical-align:middle;text-align:center;font-weight:700">${esc(dt)}</td>` : ''}
+        <td>${f}</td><td class="num">${L(a.l)}</td><td class="num">${A(a.a)}</td></tr>`;
+    });
+  });
+  rows += `<tr class="subtotal-row"><td></td><td><b>Total</b></td><td class="num"><b>${L(tl)}</b></td><td class="num"><b>${A(ta)}</b></td></tr>`;
+
+  const co = groupCardOnlyByCategory(d.cardOnly).groups;
+  const cnt = [
+    ['1. Unusual filling variance', d.matchedUnusual.length],
+    [`2. More than ±${VARIANCE_TOLERANCE_L} L variance`, d.matchedFlagged.length],
+    ['3. GPS unavailable & offline', d.cardOnly.length + ` (Not classified ${(co[UNCLASSIFIED_LABEL]||[]).length}, No GPS Tracker ${(co['No GPS Tracker']||[]).length})`],
+    [`4. Time variance > ${TIME_MIN_SHOW} min`, buildTimeVarianceRows(d).length],
+    [`5. On GPS (${EXPECTED_LOCATION}), not on card`, d.gpsOnlyOnSite.length + (d.gpsOnlyOffSite.length ? ` (+ ${d.gpsOnlyOffSite.length} not at Sedawatta)` : '')],
+    [`6. Variance within ±${VARIANCE_TOLERANCE_L} L — OK`, d.matchedOk.length],
+    ['7. Abnormal highlights', (abnormalItems||[]).length]
+  ].map(r => `<tr><td>${esc(r[0])}</td><td class="num">${esc(String(r[1]))}</td></tr>`).join('');
+  return `<div class="report-section">
+    <div class="sec-title">Summary</div>
+    <table class="simple summary" style="max-width:520px"><thead>
+      <tr><th colspan="4" style="text-align:left">(Mobitel Card)</th></tr>
+      <tr><th rowspan="2" style="text-align:center">Date</th><th rowspan="2" style="text-align:center">Fuel Type</th><th colspan="2" style="text-align:center">Pumped</th></tr>
+      <tr><th class="num">Pumped Ltr</th><th class="num">Amount</th></tr></thead><tbody>${rows}</tbody></table>
+    <table class="simple" style="max-width:520px;margin-top:14px"><thead><tr><th>Report section</th><th class="num">Entries</th></tr></thead><tbody>${cnt}</tbody></table>
+  </div>`;
+}
+
+function buildAllSectionsHtml(forPrint){
+  const d = buildReportData();
+  const sumCard = arr => arr.reduce((s,r)=>s+r.cardL,0);
+  const sumGps = arr => arr.reduce((s,r)=>s+r.gpsL,0);
+  const sumGpsOnly = arr => arr.reduce((s,r)=>s+r.gps.liters,0);
+
+  let html = '';
+  html += buildSummaryHtml(d);
+  // 1. Unusual filling variance
+  html += buildSectionHtml(
+    `1. Unusual filling variance (${d.matchedUnusual.length})`,
+    `Entries flagged as unusual filling — automatically when |variance| is more than ${UNUSUAL_VARIANCE_L} L, or manually during allocation — reported separately from normal matches.`,
+    d.matchedUnusual.map(r => matchedRowHtml(r, forPrint)).join(''),
+    subtotalRow('Subtotal — Unusual filling variance', sumCard(d.matchedUnusual), sumGps(d.matchedUnusual))
+  );
+  // 2. More than +/- tolerance
+  html += buildSectionHtml(
+    `2. More than ±${VARIANCE_TOLERANCE_L} L Variance — Fuel Pump vs GPS (${d.matchedFlagged.length})`,
+    `On-site at ${EXPECTED_LOCATION}, sorted by largest variance. Variance above ±${UNUSUAL_VARIANCE_L} L is reported in section 1.`,
+    d.matchedFlagged.map(r => matchedRowHtml(r, forPrint)).join(''),
+    subtotalRow('Subtotal — Variance flagged', sumCard(d.matchedFlagged), sumGps(d.matchedFlagged))
+  );
+  // 3. GPS unavailable & offline (3.1 Not classified, 3.2 No GPS Tracker, ...)
+  html += buildSection2Html(forPrint);
+  // 4. Time variance > 5 min
+  html += buildTimeSectionHtml(d, forPrint);
+  // 5. On GPS Sedawatta, not on card  (+ 5.1 GPS fills elsewhere, for awareness)
+  html += `<div class="report-section">
+    <div class="sec-title">5. On GPS (${esc(EXPECTED_LOCATION)}), not on card (${d.gpsOnlyOnSite.length})</div>
+    <div class="sec-sub">Sedawatta fills in the GPS PDF that were not allocated to any card entry.</div>
+    <div class="subsection"><table>${tableHead()}${d.gpsOnlyOnSite.length ? d.gpsOnlyOnSite.map(r => gpsOnlyRowHtml(r, forPrint)).join('') : `<tr><td colspan="13" style="color:#94a3b8;font-size:12px;padding:12px;">None.</td></tr>`}${subtotalRow('Subtotal — On GPS Sedawatta, not on card', null, sumGpsOnly(d.gpsOnlyOnSite))}</tbody></table></div>
+    ${d.gpsOnlyOffSite.length ? buildSubSectionHtml(`5.1 GPS fills not at ${EXPECTED_LOCATION}, not on card (${d.gpsOnlyOffSite.length})`,
+        d.gpsOnlyOffSite.map(r => gpsOnlyRowHtml(r, forPrint)).join(''),
+        subtotalRow('Subtotal — Not at Sedawatta', null, sumGpsOnly(d.gpsOnlyOffSite))) : ''}
+  </div>`;
+  // 6. Variance within tolerance - OK
+  html += buildSectionHtml(
+    `6. Variance within ±${VARIANCE_TOLERANCE_L} L — OK (${d.matchedOk.length})`,
+    `Matched entries where |variance| ≤ ${VARIANCE_TOLERANCE_L} L.`,
+    d.matchedOk.map(r => matchedRowHtml(r, forPrint)).join(''),
+    subtotalRow('Subtotal — Variance OK', sumCard(d.matchedOk), sumGps(d.matchedOk))
+  );
+  // 7. Abnormal highlights (editable on screen)
+  html += buildAbnormalSectionHtml(d, forPrint);
+
+  // Grand total
+  const grand = `<div class="report-section" style="page-break-after:auto">
+    <table><tbody>
+      <tr class="grandtotal-row">
+        <td colspan="7"><b>GRAND TOTAL</b></td>
+        <td class="num"><b>${d.grandCard.toFixed(2)}</b></td>
+        <td class="num"><b>${d.grandGps.toFixed(2)}</b></td>
+        <td class="num"><b>${(d.grandVar>=0?'+':'')+d.grandVar.toFixed(2)}</b></td>
+        <td class="num"><b>${d.grandPct!=null?(d.grandPct>=0?'+':'')+d.grandPct+'%':'-'}</b></td>
+        <td colspan="2"></td>
+      </tr>
+    </tbody></table>
+  </div>`;
+  return html + grand;
+}
+
+function renderReport(){
+  const area = document.getElementById('reportArea');
+  if (!cardRows.length || !gpsRows.length){ area.innerHTML = ''; return; }
+  const d = buildReportData();
+  const { order, groups } = groupCardOnlyByCategory(d.cardOnly);
+  const categoryStats = order
+    .filter(cat => (groups[cat]||[]).length)
+    .map(cat => `<div class="stat amber"><div class="num">${groups[cat].length}</div><div class="label">${esc(cat)}</div></div>`).join('');
+
+  area.innerHTML = `
+    <div class="card">
+      <h2>Step 3 — Variance report</h2>
+      <div class="stats">
+        <div class="stat green"><div class="num">${d.matchedOk.length}</div><div class="label">Variance OK</div></div>
+        <div class="stat red"><div class="num">${d.matchedFlagged.length}</div><div class="label">Variance &gt; ±${VARIANCE_TOLERANCE_L} L</div></div>
+        ${d.matchedUnusual.length ? `<div class="stat red"><div class="num">${d.matchedUnusual.length}</div><div class="label">⚠ Unusual filling</div></div>` : ''}
+        <div class="stat amber"><div class="num">${d.cardOnly.length}</div><div class="label">On card, not on GPS</div></div>
+        <div class="stat amber"><div class="num">${d.gpsOnlyOnSite.length}</div><div class="label">On GPS Sedawatta, not on card</div></div>
+        <div class="stat red"><div class="num">${d.gpsOnlyOffSite.length}</div><div class="label">On GPS off-site, not on card</div></div>
+      </div>
+      ${categoryStats ? `<div class="stats">${categoryStats}</div>` : ''}
+      <div class="searchbar">
+        <button class="ghost" onclick="downloadCsv()">Download CSV</button>
+        <button class="primary" onclick="downloadPdf()">Download PDF report</button>
+        <span class="hint">Each section starts on a new PDF page.</span>
+      </div>
+      <div id="reportSections">${buildAllSectionsHtml(false)}</div>
+    </div>`;
+}
+
+/* ============================================================
+   EXPORTS
+   ============================================================ */
+function downloadCsv(){
+  const d = buildReportData();
+  const header = ['Section','Card Date & Time','GPS Date & Time','Vehicle','Vehicle Type','Shift','Area','Location(s)','Pumped (Card)','Pumped (GPS)','Variance','Vari %','Status','Note'];
+  const q = v => { v = (v??'').toString(); return /[",\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; };
+  const lines = [header.join(',')];
+  const sumCard = arr => arr.reduce((s,r)=>s+r.cardL,0);
+  const sumCardOnly = arr => arr.reduce((s,r)=>s+r.card.liters,0);
+  const sumGps = arr => arr.reduce((s,r)=>s+r.gpsL,0);
+  const sumGpsOnly = arr => arr.reduce((s,r)=>s+r.gps.liters,0);
+
+  d.matched.forEach(r => lines.push([r.unusual ? 'Unusual filling variance' : (r.status === 'ok' ? '6. Variance OK' : '2. Variance > ±' + VARIANCE_TOLERANCE_L + ' L'), fmtDT(r.card.date, r.card.time), gpsDtList(r.gpsList, ' | '), r.card.vehicle, vtype(r.card), r.card.shift, r.card.area, r.locations,
+    r.cardL.toFixed(2), r.gpsL.toFixed(2), r.variance.toFixed(2), r.pct, r.unusual ? 'unusual' : r.status, r.gpsList.length+' fill(s)'+(r.unusual && r.unusual.note ? ' — '+r.unusual.note : '')].map(q).join(',')));
+  lines.push(['Subtotal — Matched','','','','','','','', sumCard(d.matched).toFixed(2), sumGps(d.matched).toFixed(2),'','','',''].map(q).join(','));
+
+  const { order, groups } = groupCardOnlyByCategory(d.cardOnly);
+  order.forEach(cat => {
+    const list = groups[cat] || [];
+    if (!list.length) return;
+    list.forEach(r => {
+      const note = r.detail ? r.detail : (r.hasGps ? (r.skipped ? 'Skipped — no GPS fill to allocate' : 'GPS fills available — not allocated') : 'No GPS fills in PDF');
+      lines.push([`On card, not on GPS — ${cat}`, fmtDT(r.card.date, r.card.time), '', r.card.vehicle, vtype(r.card), r.card.shift, r.card.area, '',
+        r.card.liters.toFixed(2), '', '', '', 'gps-missing', note].map(q).join(','));
+    });
+    lines.push([`Subtotal — ${cat}`,'','','','','','','', list.reduce((s,r)=>s+r.card.liters,0).toFixed(2),'','','','',''].map(q).join(','));
+  });
+
+  d.gpsOnlyOnSite.forEach(r => lines.push(['On GPS Sedawatta, not on card', '', r.gps.date+' '+r.gps.time, r.gps.vehicle, '', '', '', r.gps.location,
+    '', r.gps.liters.toFixed(2), '', '', 'card-missing', r.gps.description||''].map(q).join(',')));
+  lines.push(['Subtotal — On GPS Sedawatta, not on card','','','','','','','','', sumGpsOnly(d.gpsOnlyOnSite).toFixed(2),'','','',''].map(q).join(','));
+
+  d.gpsOnlyOffSite.forEach(r => lines.push(['On GPS off-site, not on card', '', r.gps.date+' '+r.gps.time, r.gps.vehicle, '', '', '', r.gps.location,
+    '', r.gps.liters.toFixed(2), '', '', 'card-missing', r.gps.description||''].map(q).join(',')));
+  lines.push(['Subtotal — On GPS off-site, not on card','','','','','','','','', sumGpsOnly(d.gpsOnlyOffSite).toFixed(2),'','','',''].map(q).join(','));
+
+  syncAbnormal(d);
+  abnormalItems.forEach(x => lines.push(['7. Abnormal highlights','','',x.veh,'','','','',(+x.litres||0).toFixed(2),'','','','',(x.cat+' — '+x.issue+' — '+x.action)].map(q).join(',')));
+  lines.push(['GRAND TOTAL','','','','','','','', d.grandCard.toFixed(2), d.grandGps.toFixed(2), d.grandVar.toFixed(2), d.grandPct, '',''].map(q).join(','));
+
+  const blob = new Blob([lines.join('\n')], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob), a = document.createElement('a');
+  a.href = url; a.download = 'fuel_card_vs_gps_manual_report.csv'; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url), 500);
+}
+
+function downloadPdf(){
+  const w = window.open('', '_blank');
+  if (!w){ alert('Please allow pop-ups to generate the PDF.'); return; }
+  const dates = [...new Set(cardRows.map(r=>r.date).filter(Boolean))].sort();
+  const dateLabel = dates.length === 1 ? dates[0] : (dates.length ? `${dates[0]} → ${dates[dates.length-1]}` : '-');
+
+  const heading = `<div class="report-heading">
+      <div class="line1">CLEANTECH (PVT) LTD — FUEL RECONCILIATION REPORT</div>
+      <div class="line2">Fuel card (Excel / Mobitel OneFuel) vs GPS fills</div>
+      <div class="line3">DATE : ${esc(dateLabel)}</div>
+    </div>`;
+  const body = heading + buildAllSectionsHtml(true);
+
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Fuel Card vs GPS Reconciliation</title>
+  <style>
+    @page { size: A4 landscape; margin: 10mm 8mm; }
+    body{font-family:Arial,Helvetica,sans-serif;color:#1b2430;padding:6px;margin:0;font-size:10pt;line-height:1.35}
+    .report-heading{text-align:center;margin-bottom:14px}
+    .report-heading .line1{font-size:16pt;font-weight:700;text-transform:uppercase;margin-bottom:3px;letter-spacing:.4px}
+    .report-heading .line2{font-size:11pt;margin-bottom:3px;color:#333}
+    .report-heading .line3{font-size:10pt;color:#333}
+    .report-section{margin-bottom:12px}
+    .report-section .sec-title{font-size:12pt;font-weight:700;background:#e5e2d6;padding:7px 10px;border-left:5px solid #2c5f4f;margin:0 0 5px 0;border-radius:3px}
+    .report-section .sec-sub{font-size:9.5pt;color:#555;margin:0 0 6px 4px;font-style:italic}
+    .report-section .subsection{margin-bottom:10px}
+    .report-section .subsec-title{font-size:10.5pt;font-weight:700;background:#efece2;padding:5px 9px;border-left:4px solid #a9631a;margin:0 0 4px 0;border-radius:2px;color:#7a3d0e}
+    table{width:100%;border-collapse:collapse;font-size:8.5pt;margin-bottom:6px;table-layout:fixed}
+    th,td{border:1px solid #999;padding:4px 5px;text-align:left;vertical-align:top;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;hyphens:auto}
+    th{background:#eee;font-size:8pt;font-weight:700}
+    td.num{text-align:right;white-space:nowrap}
+    th.num{text-align:right;white-space:normal;line-height:1.15}
+    th{overflow-wrap:normal;word-break:normal;hyphens:none}
+    /* 13-column layout: Card D&T, GPS D&T, Vehicle, Type, Shift, Area, Location(s), Card L, GPS L, Variance, Vari%, Status, Note */
+    table th:nth-child(1), table td:nth-child(1){width:9%}
+    table th:nth-child(2), table td:nth-child(2){width:9%}
+    table th:nth-child(3), table td:nth-child(3){width:7%}
+    table th:nth-child(4), table td:nth-child(4){width:8%}
+    table th:nth-child(5), table td:nth-child(5){width:4%}
+    table th:nth-child(6), table td:nth-child(6){width:7%}
+    table th:nth-child(7), table td:nth-child(7){width:13%}
+    table th:nth-child(8), table td:nth-child(8){width:6%}
+    table th:nth-child(9), table td:nth-child(9){width:6%}
+    table th:nth-child(10), table td:nth-child(10){width:6%}
+    table th:nth-child(11), table td:nth-child(11){width:5%}
+    table th:nth-child(12), table td:nth-child(12){width:7%}
+    table th:nth-child(13), table td:nth-child(13){width:13%}
+    table.simple th, table.simple td{width:auto !important}
+    tr.subtotal-row td{background:#f0eee2;font-weight:700}
+    tr.grandtotal-row td{background:#dce7e0;font-weight:700;font-size:9.5pt}
+    /* top-level sections start a new page; section 2's subsections flow together */
+    .report-section{page-break-after:always;break-after:page}
+    .report-section:last-child{page-break-after:auto;break-after:auto}
+  </style></head><body>${body}
+  <script>window.onload=function(){setTimeout(function(){window.focus();window.print();},300);};<\/script>
+  </body></html>`);
+  w.document.close();
+}
+
+/* boot */
+renderCardStats();
+renderAllocTable();
+renderOfflineSection();
+</script>
+</body>
+</html>

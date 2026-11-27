@@ -1,0 +1,6 @@
+{
+  "name": "Cleantech Fuel Management System",
+  "description": "Unified fleet fuel reconciliation, multi-day Excel consolidation, and fuel voucher analysis workspace.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

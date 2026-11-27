@@ -1,0 +1,1903 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fuel Voucher Analysis Tool</title>
+<style>
+:root{
+  --ink:#1b2430; --paper:#f6f4ee; --panel:#fff; --line:#d9d4c7;
+  --accent:#2c5f4f; --accent-ink:#eef5f1; --amber:#a9631a; --amber-bg:#fbeee0;
+  --red:#a4342a; --red-bg:#fbe9e6; --green:#2c6b3f; --green-bg:#e7f2e9;
+  --blue:#3569a8; --blue-bg:#eaf1fb; --muted:#6d7680;
+  --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--font);background:var(--paper);color:var(--ink);line-height:1.4}
+header{padding:20px 32px 16px;border-bottom:1px solid var(--line);background:var(--panel)}
+header h1{margin:0;font-size:22px;letter-spacing:.04em;font-weight:800} header p{margin:0;color:#5a6470;font-size:14px;max-width:920px}
+main{padding:20px 32px 140px;max-width:1550px;margin:0 auto}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:7px;margin-bottom:18px}
+.card-head{display:flex;align-items:center;justify-content:space-between;padding:13px 17px;border-bottom:1px solid var(--line);cursor:pointer;user-select:none}
+.card-head h2{margin:0;font-size:15px;font-weight:650}.chevron{color:#8a93a0;transition:transform .15s}
+.card.collapsed .card-body{display:none}.card.collapsed .chevron{transform:rotate(-90deg)}
+.file-btn{display:inline-flex;align-items:center;padding:9px 14px;border:1px solid var(--line);border-radius:4px;cursor:pointer;font-weight:600;font-size:13.5px;background:transparent;color:var(--ink)}
+.file-btn:hover{background:#f4f1e8}
+.card-body{padding:17px}.row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}.row+.row{margin-top:10px}
+button{font-family:inherit;font-size:13px;font-weight:600;border-radius:5px;border:1px solid transparent;padding:8px 14px;cursor:pointer;transition:.12s}
+button.primary{background:var(--accent);color:var(--accent-ink)}button.primary:hover{background:#254f42}
+button.ghost{background:transparent;border-color:var(--line);color:var(--ink)}button.ghost:hover{background:#efece2}
+button.danger{background:transparent;border-color:#e2b4b0;color:var(--red)}button.danger:hover{background:var(--red-bg)}
+button.success{background:var(--green-bg);border-color:#9ab8a5;color:var(--green)}button.success:hover{background:#d8eadb}
+button:disabled{opacity:.38;cursor:not-allowed}.hint{font-size:12px;color:var(--muted)}
+.stats{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:15px}.stat{background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:11px 15px;min-width:145px}
+.stat .num{font-size:21px;font-weight:750;line-height:1}.stat .label{font-size:11px;color:#7a8390;margin-top:4px}
+.stat.red .num{color:var(--red)}.stat.amber .num{color:var(--amber)}.stat.green .num{color:var(--green)}.stat.blue .num{color:var(--blue)}
+.toolbar{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:6px;background:var(--panel);max-height:64vh}
+table{border-collapse:collapse;width:100%;font-size:12.3px;min-width:800px}
+thead th{position:sticky;top:0;background:#efece2;text-align:left;padding:8px 9px;font-weight:650;border-bottom:1px solid var(--line);white-space:nowrap;z-index:2}
+tbody td{padding:6px 9px;border-bottom:1px solid #eeece3;white-space:nowrap;vertical-align:middle}tbody tr:hover{background:#faf8f2}
+tbody tr.status-red td:first-child{box-shadow:inset 3px 0 0 var(--red)}tbody tr.status-amber td:first-child{box-shadow:inset 3px 0 0 var(--amber)}tbody tr.status-purple td:first-child{box-shadow:inset 3px 0 0 #6a3fa0}tbody tr.selected{background:#eaf1ee}
+tfoot td{font-weight:800;background:#efece2;border-top:2px solid var(--line);padding:7px 9px}
+tfoot td.num{text-align:right}
+input[type=text],input[type=number],select{font-family:inherit;font-size:12.3px;border:1px solid transparent;background:transparent;padding:4px 6px;border-radius:4px;color:var(--ink)}
+td input[type=text],td input[type=number]{width:100%;min-width:75px}input:focus,select:focus{border-color:var(--accent);background:#fff;outline:none}
+input.area-input{min-width:210px;border:1px solid var(--line);background:#fff}input.area-input.confirmed{border-color:#91b29f;background:#f6fbf7}
+.area-cell{position:relative;display:flex;align-items:center;gap:5px}.area-wrap{position:relative;min-width:270px}
+.area-suggest{position:absolute;left:0;right:0;top:100%;z-index:30;background:#fff;border:1px solid var(--line);border-top:0;border-radius:0 0 5px 5px;max-height:220px;overflow:auto;box-shadow:0 6px 16px rgba(0,0,0,.10);display:none}
+.area-suggest.show{display:block}.area-option{padding:7px 9px;cursor:pointer;font-size:12px;white-space:nowrap}.area-option:hover,.area-option.active{background:#eef5f1}
+.area-ok{padding:4px 7px;border-radius:4px;border:1px solid #9ab8a5;background:#f2f8f4;color:var(--green);font-weight:750}.area-ok.pending{border-color:#d6cec0;background:#f8f6ef;color:#8a7b66}
+.badge{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.01em;padding:2px 7px;border-radius:10px}
+.badge.red{background:var(--red-bg);color:var(--red)}.badge.amber{background:var(--amber-bg);color:var(--amber)}.badge.green{background:var(--green-bg);color:var(--green)}.badge.blue{background:var(--blue-bg);color:var(--blue)}.badge.purple{background:#efe6f7;color:#6a3fa0}
+.badge.day{background:#eaf1fb;color:#3569a8}.badge.night{background:#efe6f7;color:#6a3fa0}
+.locked-cell{font-weight:600;display:inline-flex;align-items:center;gap:4px}.lock-ic{font-size:10px;opacity:.5}
+.vehicle-cell{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.split-btn{font-size:10.5px;font-weight:700;padding:3px 8px;border:1px solid var(--line);border-radius:3px;background:#fff;color:var(--ink);cursor:pointer}
+.split-btn.warn{border-color:#e0b978;color:var(--amber);background:var(--amber-bg)}.split-btn.ok{border-color:#9ec7ab;color:var(--green);background:var(--green-bg)}
+.breakdown-row td{background:#faf8f2;padding:12px 16px}
+.breakdown-panel{max-width:900px}.breakdown-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px;font-size:12.5px}
+.breakdown-table{width:100%;border-collapse:collapse}.breakdown-table th,.breakdown-table td{padding:5px 6px;border-bottom:1px solid var(--line);white-space:normal}
+.breakdown-table input,.breakdown-table select{width:100%;border:1px solid var(--line);background:#fff;padding:5px 7px;border-radius:4px;font-size:12.5px}
+.empty-state{padding:55px 20px;text-align:center;color:#8a93a0;font-size:13px}
+.notice{padding:10px 12px;border-radius:5px;background:#f7f4ec;border:1px solid var(--line);font-size:12.5px;margin-bottom:12px}
+.applied-summary{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.right{margin-left:auto}
+.searchbar{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap;margin:10px 0 4px;padding:10px 11px;background:#f7f4ec;border:1px solid var(--line);border-radius:6px}
+.search-field{display:flex;flex-direction:column;gap:3px;min-width:290px}.search-field label{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700}
+.search-field input{border:1px solid var(--line);background:#fff;padding:8px 9px;border-radius:4px;font-size:12.5px;min-width:290px}
+.search-field.compact{min-width:250px}.search-field.compact input{min-width:250px}
+
+/* ---- Section 1: fuel price reference grid ---- */
+.price-ref-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-bottom:8px}
+.price-ref-item{background:#fff;border:1px solid var(--line);border-radius:6px;padding:10px 12px;display:flex;flex-direction:column;gap:4px}
+.price-ref-item label{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700}
+.price-ref-item input{font-family:inherit;font-size:15px;font-weight:700;padding:8px 10px;border:1px solid var(--line);border-radius:4px;background:#fbfaf6;color:var(--ink);width:100%}
+.price-ref-item input:focus{border-color:var(--accent);background:#fff;outline:none}
+.price-ref-item .cur{font-size:11px;color:var(--muted)}
+.price-ref-title{font-size:12.5px;font-weight:700;color:var(--ink);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.price-ref-title .badge{margin-left:2px}
+
+/* ---- Settings row ---- */
+.settings-row{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-top:14px;padding:12px 14px;background:#f7f4ec;border:1px solid var(--line);border-radius:6px}
+.settings-row .field{display:flex;flex-direction:column;gap:3px}
+.settings-row label{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700}
+.settings-row input{font-family:inherit;font-size:13px;padding:7px 9px;border:1px solid var(--line);border-radius:4px;background:#fff;color:var(--ink);min-width:180px}
+
+/* ---- Bulk apply bar (bottom) ---- */
+#bulkbar{position:fixed;left:0;right:0;bottom:0;background:#1b2430;color:#f2f1ec;padding:12px 32px 26px;display:none;align-items:center;gap:22px;flex-wrap:wrap;box-shadow:0 -4px 14px rgba(0,0,0,.18);z-index:50;border-top:3px solid #4cc38a}
+#bulkbar.show{display:flex}
+#bulkbar .bar-info{display:flex;flex-direction:column;gap:5px;min-width:220px;user-select:none}
+#bulkbar .count{font-weight:800;font-size:14px;white-space:nowrap}
+#bulkbar .report-info{align-self:flex-start;font-size:11px;font-weight:600;color:#bfeed8;background:rgba(76,195,138,.14);border:1px solid rgba(76,195,138,.35);border-radius:10px;padding:2px 10px;max-width:520px;line-height:1.4}
+#bulkbar .report-info:empty{display:none}
+#bulkbar .field{display:flex;flex-direction:column;gap:4px;position:relative}
+#bulkbar label{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#b7bcc5;font-weight:700}
+#bulkbar input{font-family:inherit;font-size:16px;font-weight:700;padding:9px 12px;border-radius:5px;border:1px solid #4a5261;background:#2b333d;color:#fff;min-width:200px}
+#bulkbar input::placeholder{color:#7f8895;font-weight:500}
+#bulkbar input:focus{outline:none;border-color:#4cc38a;background:#222a33}
+#bulkbar .voucher-autofill{position:absolute;top:100%;left:0;margin-top:3px;white-space:nowrap;font-size:10.5px;color:#9ee2c2;font-weight:600}
+#bulkbar .bar-actions{margin-left:auto;display:flex;gap:10px;align-items:center}
+#bulkbar .clear{background:transparent;color:#d5d9df;border:1px solid #5a6270;padding:10px 16px}
+#bulkbar .clear:hover{background:#2b333d}
+#bulkbar .apply{background:#4cc38a;color:#0f2a1e;border:1px solid #4cc38a;padding:11px 22px;font-size:14px;font-weight:800}
+#bulkbar .apply:hover{background:#63d09c}
+
+/* ---- Saved Voucher Record ---- */
+.bill-print, .bill-print *{font-family:var(--font);}
+.bill-print{max-width:100%;margin:0 auto;border:1px solid var(--line);background:#fff;border-radius:6px;overflow:hidden}
+.bill-print-head{padding:13px 16px 10px;text-align:center;border-bottom:1px solid var(--line)}
+.bill-print-head .supplier{font-size:13.5px;font-weight:800;letter-spacing:.04em}
+.bill-print-head .meta{margin-top:4px;font-size:12px;color:#4a5460}
+.bill-title{font-size:12.5px;font-weight:800;letter-spacing:.04em;margin-top:8px}
+.bill-like-table{min-width:2050px;font-size:12.3px}
+.bill-like-table thead th{background:#efece2}
+.bill-like-table td,.bill-like-table th{padding:6px 9px;white-space:nowrap}
+.bill-like-table td.num,.bill-like-table th.num{text-align:right}
+.bill-like-table td.actions{white-space:nowrap}
+.bill-like-table tfoot td{background:#efece2;font-weight:800;border-top:2px solid var(--line)}
+.row-action{padding:3px 7px !important;font-size:11px !important;font-weight:600 !important;border-radius:3px !important;margin-right:3px}
+.bill-print-total{display:flex;justify-content:flex-end;gap:32px;padding:9px 16px 12px;font-weight:800;border-top:1px solid var(--line);font-size:13px}
+.bill-print.selected-voucher{margin-top:0;border-top:3px solid #b40000}
+.voucher-status-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:9px 0 11px}
+.review-btn{background:var(--green-bg);color:var(--green);border:1px solid #9ab8a5}
+
+/* ---- Voucher picker ---- */
+.checker-grid{display:grid;grid-template-columns:0.85fr 1.6fr;gap:14px;margin-top:8px}
+.filter-panel{border:1px solid var(--line);background:#fff;border-radius:4px;overflow:hidden}
+.filter-title{font-weight:800;padding:8px 10px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:6px}
+.mini-clear{padding:3px 8px !important;font-size:11px !important;font-weight:600 !important;border-radius:3px !important}
+.filter-buttons{padding:8px;display:flex;gap:5px;flex-wrap:wrap;max-height:190px;overflow:auto;align-content:flex-start}
+.filter-btn{background:#fff;border:1px solid var(--line);color:#1d252c;padding:6px 10px;border-radius:3px;font-weight:700;min-width:48px}
+.filter-btn:hover{background:#f4f1e8}
+.filter-btn.active{background:#1b2430;color:#fff;border-color:#1b2430}
+.filter-btn.match{background:#eaf1fb;border-color:#a8c4e4;color:#3569a8}
+.filter-btn.match:hover{background:#d6e6f7}
+.filter-btn.nomatch{background:#f4f3ee;border-color:#e7e4d9;color:#b8b6ac;cursor:not-allowed}
+
+/* ---- Edit modal ---- */
+.modal-backdrop{position:fixed;inset:0;background:rgba(20,25,32,.45);z-index:100;display:none;align-items:center;justify-content:center}
+.modal-backdrop.show{display:flex}
+.modal{background:#fff;padding:22px 24px;border-radius:8px;min-width:380px;max-width:520px;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+.modal h3{margin:0 0 14px;font-size:15px}
+.modal .field{display:flex;flex-direction:column;gap:3px;margin-bottom:10px}
+.modal label{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700}
+.modal input,.modal select{font-family:inherit;font-size:13px;padding:8px 9px;border:1px solid var(--line);border-radius:4px;background:#fff;color:var(--ink)}
+.modal .row-end{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+.modal .mileage-readout{background:#f7f4ec;border:1px solid var(--line);border-radius:4px;padding:8px 10px;font-weight:700;color:var(--green)}
+
+.up-summary{margin-top:10px;border:1px solid var(--line);border-radius:6px;background:#fff;padding:11px 14px;font-size:12.5px;line-height:1.6}
+.up-summary .big{font-size:14px;font-weight:800}.up-summary.ok{border-color:#9ab8a5;background:#f4faf5}.up-summary.bad{border-color:#e2b4b0;background:#fdf3f1}
+.up-summary .ok-t{color:var(--green);font-weight:700}.up-summary .bad-t{color:var(--red);font-weight:700}.up-summary .chip{display:inline-block;background:#efece2;border-radius:10px;padding:1px 9px;margin:2px 4px 2px 0;font-weight:600;font-size:11.5px}
+#pageNav{display:flex;gap:2px;flex-wrap:wrap;padding:0 32px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:40}
+#pageNav .tab{background:transparent;border:0;border-bottom:3px solid transparent;border-radius:0;padding:12px 16px 10px;font-size:13.5px;font-weight:600;color:#5a6470;display:inline-flex;align-items:center;gap:7px}
+#pageNav .tab{transition:none}
+#pageNav .tab:hover{background:#f4f1e8}
+#pageNav .tab.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:750}
+.page{display:none}.page.active{display:block}
+.card-head{cursor:default}
+header{padding:20px 32px 16px}
+@media (max-width:800px){#pageNav{padding:0 10px}header,main{padding-left:14px;padding-right:14px}}
+</style>
+</head>
+<body>
+<header>
+  <h1>FUEL VOUCHER ANALYSIS TOOL</h1>
+</header>
+<nav id="pageNav">
+  <button class="tab active" data-page="upload" onclick="showPage('upload')">1. Upload report</button>
+  <button class="tab" data-page="areas" onclick="showPage('areas')">2. Vehicle → Area list</button>
+  <button class="tab" data-page="pending" onclick="showPage('pending')">3. Pending transactions <span class="badge amber" id="tabPending">0</span></button>
+  <button class="tab" data-page="applied" onclick="showPage('applied')">4. Applied vouchers <span class="badge green" id="tabApplied">0</span></button>
+</nav>
+
+<main>
+  <div class="card page active" data-page="upload" id="setupCard">
+    <div class="card-head"><h2>1. Upload report</h2></div>
+    <div class="card-body">
+
+      <div class="settings-row">
+        <div class="field"><label>Your name (created_by)</label><input type="text" id="currentUser" placeholder="e.g. G P S Abimana" oninput="saveWorkspace()"></div>
+        <div class="field"><label>User ID (Usage_id — same for every transaction)</label><input type="text" id="userId" value="9362" oninput="saveWorkspace()"></div>
+      </div>
+
+      <div class="row" style="margin-top:14px">
+        <label class="file-btn">Upload Mobitel OneFuel Transaction Report PDF<input type="file" accept="application/pdf" style="display:none" onchange="handlePumpedPdfUpload(this)"></label>
+        <button class="ghost right" onclick="clearWorkspace()">Clear all workspace</button>
+      </div>
+      <div class="hint" id="pdfUploadStatus" style="margin-top:8px"></div>
+      <div id="uploadSummary"></div>
+      <div class="hint" style="margin-top:9px">The PDF is read entirely in your browser — nothing is sent anywhere. Once a row is loaded, its Usage Date, Vehicle Number, Liters, Fuel Type and Price are <b>locked</b>. The report's single mileage value is placed in <b>Meter Reading End</b> (a mileage of 3 means the vehicle has no mileage, so it is left blank). You can add the <b>Meter Reading Start</b>, <b>Area</b> and the split lines of <b>Common - Petrol/Diesel</b> rows.</div>
+    </div>
+  </div>
+
+  <div class="card page" data-page="areas" id="areaListCard">
+    <div class="card-head"><h2>2. Vehicle → Area list <span class="badge blue" id="areaListCount"></span></h2></div>
+    <div class="card-body">
+      <div class="notice">This list gives each vehicle its suggested <b>Area</b> (used by <b>✓ Tick all suggested areas</b>). It is <b>saved in this browser</b>. <b>Download</b> it to edit in Excel or keep a backup, then <b>Upload</b> it back — or load it on another computer. Columns: <b>Vehicle Number</b> and <b>Area</b> (one row per vehicle; add a second row for a second area — the first row is the suggestion).</div>
+      <div class="toolbar">
+        <button class="success" onclick="downloadAreaList('xlsx')">⬇ Download Excel</button>
+        <button class="ghost" onclick="downloadAreaList('csv')">⬇ Download CSV</button>
+        <label class="file-btn">⬆ Upload area list (.xlsx / .csv)<input type="file" accept=".xlsx,.csv,text/csv" style="display:none" onchange="uploadAreaList(this)"></label>
+        <select id="areaUploadMode" style="border:1px solid var(--line);background:#fff;padding:7px 8px">
+          <option value="merge">Merge — update &amp; add vehicles</option>
+          <option value="replace">Replace the whole list</option>
+        </select>
+        <button class="danger right" onclick="resetAreaList()">Reset to built-in list</button>
+      </div>
+      <div class="hint" id="areaListStatus" style="margin-bottom:8px"></div>
+      <div class="searchbar" style="margin-top:0">
+        <div class="search-field compact"><label>Find vehicle or area</label><input id="areaListSearch" type="text" placeholder="e.g. LM-1328 or D5" oninput="renderAreaList()"></div>
+        <div class="search-field compact" style="min-width:150px"><label>New vehicle</label><input id="newAreaVeh" type="text" placeholder="Vehicle Number" style="min-width:150px"></div>
+        <div class="search-field compact" style="min-width:200px"><label>Area</label><input id="newAreaName" type="text" placeholder="Area" style="min-width:200px"></div>
+        <button class="primary" onclick="addAreaRow()">+ Add</button>
+      </div>
+      <div class="table-wrap" id="areaListTable" style="max-height:340px"></div>
+    </div>
+  </div>
+
+  <div class="stats" id="stats" style="display:none">
+    <div class="stat"><div class="num" id="statPending">0</div><div class="label">Pending transactions</div></div>
+    <div class="stat red"><div class="num" id="statMissingArea">0</div><div class="label">Area not confirmed</div></div>
+    <div class="stat" id="statSplitStat" style="display:none"><div class="num" id="statNeedsSplit" style="color:#6a3fa0">0</div><div class="label">Needs fuel split</div></div>
+    <div class="stat amber"><div class="num" id="statReady">0</div><div class="label">Ready to select</div></div>
+    <div class="stat green"><div class="num" id="statApplied">0</div><div class="label">Applied to voucher</div></div>
+  </div>
+
+  <div class="card page" data-page="pending" id="pendingCard">
+    <div class="card-head"><h2>3. Pending transactions — confirm Area, then select</h2></div>
+    <div class="card-body">
+      <div class="notice"><strong>Selection rule:</strong> a transaction cannot be selected until its Area is entered and confirmed with <b>✓ OK</b>. Click <b>✓ Tick all suggested areas</b> to auto-fill and confirm every row that has a known area suggestion. For a <b>Common - Diesel/Petrol</b> card, click <b>Split usage</b> — the split total must match the pumped liters exactly. Once rows are ticked, the bottom bar appears — enter the Voucher No (fuel type and price come from the report), then apply.</div>
+      <div class="toolbar">
+        <button class="success" onclick="tickAllSuggestedAreas()">✓ Tick all suggested areas</button>
+        <button class="ghost" onclick="selectAllReady()">Select all ready</button>
+        <button class="ghost" onclick="clearSelection()">Clear selection</button>
+        <button class="ghost" onclick="downloadCSV()">Download analysis CSV</button>
+        <span class="hint" id="toolbarHint"></span>
+      </div>
+      <div class="searchbar">
+        <div class="search-field"><label>FIND TRANSACTION</label><input id="pendingSearch" type="text" placeholder="Vehicle No or Usage Amount e.g. LM-1328 or 26" oninput="renderPending()"></div>
+        <button class="ghost" onclick="document.getElementById('pendingSearch').value='';renderPending()">Clear</button>
+        <span id="pendingSearchHint" class="hint"></span>
+      </div>
+      <div class="table-wrap" id="pendingTable"><div class="empty-state">No pending transactions yet — upload a report on the Upload page.</div></div>
+    </div>
+  </div>
+
+  <div class="card page" data-page="applied" id="appliedCard">
+    <div class="card-head">
+      <div class="applied-summary"><h2 style="display:inline;margin:0">4. Applied Vouchers</h2><span class="badge blue" id="voucherGroupCount">0 vouchers</span></div>
+      
+    </div>
+    <div class="card-body">
+      <div class="notice"><strong>Voucher checker:</strong> click days and vouchers to filter — click again to remove. Use <b>Edit</b> to change Voucher No / Price / Meter Readings / Shift after applying, or <b>Delete</b> to remove a record entirely.</div>
+      <div class="checker-grid">
+        <div class="filter-panel">
+          <div class="filter-title">Usage Date <span id="dateFilterHint" class="hint"></span> <button class="ghost mini-clear" onclick="clearDayFilter()">Clear</button></div>
+          <div id="dateButtons" class="filter-buttons"></div>
+        </div>
+        <div class="filter-panel">
+          <div class="filter-title">Voucher No <span id="voucherFilterHint" class="hint"></span> <button class="ghost mini-clear" onclick="clearVoucherFilter()">Clear</button></div>
+          <div id="voucherButtons" class="filter-buttons"></div>
+        </div>
+      </div>
+      <div class="searchbar">
+        <div class="search-field compact"><label>SEARCH SELECTED ROWS</label><input id="appliedSearch" type="text" placeholder="Vehicle No / Usage ID / Usage" oninput="renderSelectedVoucher()"></div>
+        <button class="ghost" onclick="document.getElementById('appliedSearch').value='';renderSelectedVoucher()">Clear search</button>
+        <button class="primary" onclick="downloadSelectionPDF()">Print preview — this selection (editable meters + shift)</button>
+        <button class="ghost" onclick="downloadFullPDF()">Print preview — complete record</button>
+      </div>
+      <div class="searchbar" style="margin-top:6px">
+        <span class="hint" style="font-weight:700">DOWNLOAD (same columns &amp; borders):</span>
+        <button class="success" onclick="downloadAppliedExcel('selection')">⬇ Excel — this selection</button>
+        <button class="success" onclick="downloadAppliedPdf('selection')">⬇ PDF — this selection</button>
+        <button class="ghost" onclick="downloadAppliedExcel('full')">⬇ Excel — complete record</button>
+        <button class="ghost" onclick="downloadAppliedPdf('full')">⬇ PDF — complete record</button>
+      </div>
+      <div id="appliedBody" style="margin-top:12px"><div class="empty-state">No applied vouchers yet.</div></div>
+    </div>
+  </div>
+
+</main>
+
+<div id="bulkbar">
+  <div class="bar-info">
+    <div class="count" id="bulkCount">0 selected · USAGE 0.00 L</div>
+    <div class="report-info" id="bulkReportInfo"></div>
+  </div>
+  <div class="field vfield">
+    <label>Voucher no *</label>
+    <input type="text" id="bulkVoucher" placeholder="e.g. 8484" oninput="onBulkVoucherChange()" onkeydown="if(event.key==='Enter')applyVoucher()">
+    <div class="voucher-autofill" id="voucherAutofillMsg"></div>
+  </div>
+  <div class="bar-actions">
+    <button class="clear" onclick="clearSelection()">Clear selection</button>
+    <button class="apply" onclick="applyVoucher()">Apply voucher &amp; move</button>
+  </div>
+</div>
+
+<div id="editModal" class="modal-backdrop">
+  <div class="modal">
+    <h3>Edit applied record</h3>
+    <div class="field"><label>Voucher No</label><input type="text" id="editVoucher"></div>
+    <div class="field"><label>Fuel Type</label>
+      <select id="editFuelType">
+        <option value="">— select —</option>
+        <option>Diesel</option><option>Petrol 92 Octan</option><option>Kerosine Oil</option><option>Super Diesel</option>
+      </select>
+    </div>
+    <div class="field"><label>SHIFT</label>
+      <select id="editShift">
+        <option value="DAY">DAY</option>
+        <option value="NIGHT">NIGHT</option>
+      </select>
+    </div>
+    <div class="field"><label>Price Per Liter</label><input type="number" id="editPrice" step="0.01"></div>
+    <div class="field"><label>Meter Reading Start</label><input type="text" id="editMeterStart" oninput="updateEditMileage()"></div>
+    <div class="field"><label>Meter Reading End</label><input type="text" id="editMeterEnd" oninput="updateEditMileage()"></div>
+    <div class="field"><label>KMS (End − Start)</label><div class="mileage-readout" id="editMileageOut">—</div></div>
+    <div class="row-end">
+      <button class="ghost" onclick="closeEditModal()">Cancel</button>
+      <button class="primary" onclick="saveEditModal()">Save changes</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const AREA_LIST = [
+  "2A","Ab Hydrotech","Circuler Economy","D2B","D2E","D3","D4","D5","Kotte","Peliyagoda",
+  "Special Job","Stand By","Tree care","WorkShop","Sapugaskanda Project","Awissawella Project",
+  "Dompe - Link Natural","Coman Special Jobs","AES - Battaramulla Setsiripaya","Port City",
+  "SriJayawardanapura Hospital","Requested Extra Jobs","Kacher Machine","C.M.C Baseline Rd",
+  "Blower Machine","Katunayaka Airport","Others workshop petrol","Paliyagoda Project",
+  "Mulleriyawa - Kotmale Factory","Mas Holding -Bopitiya","Operation staff vehicles",
+  "Ab Hydrotech - CEB Norochcholei project","Sedawatta Stock Tank","Bush Cutter","Biyagama BOI",
+  "Petrol for CMC Sites","Workshop Staff Bike","Petrol For Other Machinery","Kerosine Oil",
+  "Order Book","Accident Damage","Under Repairs"
+];
+
+let VEHICLE_AREAS = {
+  "227-8834":["Kotte"],"40C-7960":["Ab Hydrotech"],"68-6191":["Tree care"],
+  "BAD-4891":["Workshop Staff Bike"],"BAG-5566":["Workshop Staff Bike"],"BAQ-5605":["Workshop Staff Bike"],
+  "BFO-0568":["Workshop Staff Bike"],"BGV-3069":["Workshop Staff Bike"],"TW-6949":["Workshop Staff Bike"],
+  "BCJ-4568":["Workshop Staff Bike"],"BGN-4650":["Workshop Staff Bike"],"BEN-6316":["Workshop Staff Bike"],
+  "BHE-3815":["Workshop Staff Bike"],"BJE-3885":["Ab Hydrotech"],"BJE-3888":["Ab Hydrotech"],
+  "BJE-3893":["Workshop Staff Bike"],"Blower Machine":["Petrol For Other Machinery"],
+  "Bush Cutter":["Petrol For Other Machinery"],"CAY-2185":["Ab Hydrotech"],"CBE-9609":["Workshop Staff Bike"],
+  "CC 48":["Workshop Staff Bike"],"COZ-001":["AB Hydrotech - CEB Norochcholei project"],
+  "COZ-001-D":["AB Hydrotech - CEB Norochcholei project"],"COZ-001-P":["AB Hydrotech - CEB Norochcholei project"],
+  "DAA-1215":["Ab Hydrotech"],"DAC-0389":["WorkShop"],"DAG-2670":["WorkShop"],
+  "Fuel Tank-Sedawatta":["Sedawatta Stock Tank"],"GC-7108":["Ab Hydrotech"],"Genarator":["WorkShop"],
+  "HB-4497":["WorkShop"],"HF-4194":["Special Job"],"HI-5015":["D5"],"HL-2319":["Kotte"],
+  "HL-2320":["Kotte"],"HL-2321":["Kotte"],"HP-3362":["D2B"],"HW-5230":["2A"],
+  "JF-6980":["Circuler Economy"],"JJ-0862":["D4"],"JM-1368":["D2B"],"JQ-1216":["Ab Hydrotech"],
+  "Kacher Machine":["Petrol For Other Machinery"],"LA-3274":["Ab Hydrotech"],"LB-6832":["Ab Hydrotech"],
+  "LB-7709":["D4"],"LD-1532":["D4"],"LD-9991":["Ab Hydrotech"],"LF-5479":["Ab Hydrotech"],
+  "LG-1894":["Ab Hydrotech"],"LG-3902":["Ab Hydrotech"],"LG-8097":["Operation Staff Vehicles"],
+  "LH-2774":["Kotte"],"LH-2777":["Kotte"],"LH-2779":["Kotte"],"LI-4125":["Circuler Economy"],
+  "LJ-2878":["D3"],"LJ-8177":["D3"],"LJ-8187":["D3"],"LJ-8523":["D2B"],"LJ-8524":["Biyagama BOI"],
+  "LK-1648":["Ab Hydrotech"],"LK-2190":["Ab Hydrotech"],"LK-7831":["Peliyagoda"],"LK-7832":["Kotte"],
+  "LL-1807":["Circuler Economy"],"LL-3630":["Tree care"],"LL-3693":["2A"],"LL-9036":["D4"],
+  "LL-9136":["2A"],"LL-9192":["2A"],"LL-9308":["WorkShop"],"LL-9932":["2A"],"LL-9941":["2A"],
+  "LL-9942":["D5"],"LL-9945":["2A"],"LL-9946":["D5"],"LL-9947":["D5"],"LL-9948":["2A"],
+  "LL-9949":["D5"],"LL-9950":["2A"],"LL-9951":["2A"],"LL-9952":["Kotte"],"LL-9953":["2A"],
+  "LL-9954":["D5"],"LL-9956":["D5"],"LM-1036":["D2B"],"LM-1038":["D3"],"LM-1157":["Peliyagoda"],
+  "LM-1328":["D5"],"LM-1719":["D5"],"LM-1721":["D5"],"LM-1722":["2A"],"LM-1724":["D5"],
+  "LM-1727":["2A"],"LM-1728":["D5"],"LM-2313":["Special Job"],"LM-2314":["Kotte"],"LM-2316":["Peliyagoda"],
+  "LM-4786":["D5"],"LM-4787":["D2B"],"LM-4788":["D2B"],"LM-5301":["D3"],"LM-5526":["D2B"],
+  "LO-0678":["D4"],"LO-0679":["D3"],"LO-0680":["D2B"],"LO-0694":["D3"],"LO-0695":["D5"],
+  "LO-0729":["Ab Hydrotech"],"LO-4112":["2A"],"LO-4113":["D5"],"LO-4830":["D2E"],"LO-4831":["D5"],
+  "LO-4837":["D2E"],"LO-5154":["D2E"],"LO-5418":["Ab Hydrotech"],"LO-6126":["D2E"],"LO-8670":["Ab Hydrotech"],
+  "LP-5581":["Ab Hydrotech"],"MR-1145":["Workshop Staff Bike"],"MW-5813":["Workshop Staff Bike"],
+  "MY-7423":["Workshop Staff Bike"],"Other Petrol":["Petrol For Other Machinery"],
+  "PA-6087":["Operation Staff Vehicles"],"PG-2601":["D5"],"PG-6804":["Petrol for CMC Sites"],
+  "PH-1892":["D5"],"RC-7376":["D3"],"RC-7378":["D3"],"ZB-4493":["D3"],"RC-9740":["D3"],
+  "RC-9741":["D2B"],"RC-9742":["D2B"],"RE-0561":["D3"],"RE-3038":["2A"],"RE-6037":["D3"],
+  "RE-6038":["D4"],"RE-6039":["D2B"],"RE-6040":["D4"],"RE-6041":["D4"],"RF-8986":["D5"],
+  "RF-8987":["D5"],"RG-0721":["2A"],"RG-0722":["D2E"],"RG-0734":["D2E"],"RG-0790":["D2E"],
+  "RG-0791":["2A"],"RS-1695":["D5"],"TZ-1565":["Workshop Staff Bike"],"VF-2401":["Operation Staff Vehicles"],
+  "WK-1339":["Workshop Staff Bike"],"WW-8771":["Workshop Staff Bike"],"ZA-2367":["Operation Staff Vehicles"],
+  "ZA-5517":["Operation Staff Vehicles"],"ZA-5902":["Biyagama BOI"],"ZA-6093":["D4"],"ZA-6094":["2A"],
+  "ZA-7257":["D2B"],"ZA-7258":["Operation Staff Vehicles"],"ZA-7259":["D5"],"ZA-7288":["D4"],
+  "ZB-0702":["D3"],"ZB-0703":["D2E"],"ZB-0759":["D2E"],"ZB-0872":["D2E"],"ZB-0875":["D2E"],
+  "ZB-0876":["D2E"],"ZB-0877":["D2E"],"ZB-0878":["D2E"],"ZB-1036":["D2E"],"ZB-1037":["D2E"],
+  "ZB-1038":["D5"],"ZB-1040":["D5"],"ZB-1064":["D2E"],"ZB-1065":["D2E"],"ZB-1067":["D2E"],
+  "ZB-1068":["D2E"],"ZB-1069":["D2E"],"ZB-1070":["D2E"],"ZB-1076":["D3"],"ZB-1193":["D5"],
+  "ZB-2105":["Peliyagoda"],"ZB-2106":["Peliyagoda"],"ZB-3310":["Ab Hydrotech"],
+  "BIU-9994":["Workshop Staff Bike"],"Blower machine":["Petrol for CMC Sites"],
+  "Bush cutter":["Petrol for CMC Sites"],"DAG-2646":["WorkShop"],"Diesel  Stock":["Sedawatta Stock Tank"],
+  "HD-8506":["Workshop Staff Bike"],"HV-2903":["Ab Hydrotech"],"Kacher machine":["Petrol for CMC Sites"],
+  "Kerosine Oil":["Kerosine Oil"],"LH-2771":["Kotte"],"LH-2776":["Kotte"],"LH-2780":["Kotte"],
+  "LJ-7098":["Kotte"],"LL-3621":["D5"],"LL-9939":["D5"],"LM-1720":["D5"],"LM-1726":["2A"],
+  "LM-2315":["Kotte"],"LP-6286":["2A"],"LP-6287":["2A"],"LP-6651":["D3"],"LP-7130":["D3"],
+  "LP-7131":["D5"],"LP-7680":["2A"],"LP-8024":["Kotte"],"LP-8246":["D3"],"LP-8248":["D2B"],
+  "LP-8249":["D3"],"LP-8630":["Circuler Economy"],"LP-8633":["Circuler Economy"],
+  "Moskito Control Machine":["Wanawasala Yard"],"Order Book":["Order Book"],"Petrol Stock":["Petrol Stock"],
+  "RC-5914":["Ab Hydrotech"],"Super Diesel  Stock":["Supper Diesel Stock"],"ZB-4262":["Biyagama BOI"],
+  "ZB-4264":["D2B"],"ZB-4416":["D5"],"ZB-4436":["D5"],"ZB-4437":["D5"],"ZB-4438":["D5"],
+  "ZB-4570":["D5"],"ZB-4576":["D5"],"ZB-4581":["D5"]
+};
+
+// ============================================================
+// OUTPUT COLUMN ORDER (applied voucher / print preview):
+// Serial No | Usage_id | Vehicle Number | Fuel Type | Usage Date |
+// Liters Used | SHIFT | Price Per Liter | Total Cost |
+// Meter Reading Start | Meter Reading End | KMS | Voucher No |
+// Area | created_Date | created_by
+// ============================================================
+const APPLIED_COLS = [
+  {key:'__serial',     label:'Serial No'},
+  {key:'usage_id',     label:'Usage_id'},
+  {key:'vehicle',      label:'Vehicle Number'},
+  {key:'fuel_type',    label:'Fuel Type'},
+  {key:'usage_date',   label:'Usage Date'},
+  {key:'liters',       label:'Liters Used'},
+  {key:'shift',        label:'SHIFT'},
+  {key:'price',        label:'Price Per Liter'},
+  {key:'total_cost',   label:'Total Cost'},
+  {key:'meter_start',  label:'Meter Reading Start'},
+  {key:'meter_end',    label:'Meter Reading End'},
+  {key:'mileage',      label:'KMS'},
+  {key:'voucher',      label:'Voucher No'},
+  {key:'area',         label:'Area'},
+  {key:'created_date', label:'created_Date'},
+  {key:'created_by',   label:'created_by'}
+];
+
+// Pending workspace columns
+const PENDING_COLS = [
+  {key:'vehicle',label:'Vehicle Number'},
+  {key:'usage_date',label:'Usage Date'},
+  {key:'liters',label:'Liters Used'},
+  {key:'fuel_type',label:'Fuel Type'},
+  {key:'price',label:'Price Per Liter'},
+  {key:'meter_start',label:'Meter Reading Start'},
+  {key:'meter_end',label:'Meter Reading End'},
+  {key:'area',label:'Area'}
+];
+
+// CSV export order matches the output column order
+const CSV_COLS = [
+  {key:'usage_id',     label:'Usage ID'},
+  {key:'vehicle',      label:'Vehicle Number'},
+  {key:'fuel_type',    label:'Fuel Type'},
+  {key:'usage_date',   label:'Usage Date'},
+  {key:'liters',       label:'Liters Used'},
+  {key:'shift',        label:'SHIFT'},
+  {key:'price',        label:'Price Per Liter'},
+  {key:'total_cost',   label:'Total Cost'},
+  {key:'meter_start',  label:'Meter Reading Start'},
+  {key:'meter_end',    label:'Meter Reading End'},
+  {key:'mileage',      label:'KMS'},
+  {key:'voucher',      label:'Voucher No'},
+  {key:'area',         label:'Area'},
+  {key:'created_date', label:'Created Date'},
+  {key:'created_by',   label:'Created By'}
+];
+
+const COMMON_USAGE_CATEGORIES_PETROL = ["Motor Bike","Bushcutter","Blower Machine","Kacher Machine","Other Petrol"];
+const COMMON_USAGE_VEHICLES_PETROL = ["VF-2401","MR-1145","BAG-5566","MY-7423","TZ-1565","BHE-3815","BJE-3893","BGV-3069","MW-5813","WW-8771","BCJ-4568","TW-6949","BEN-6316","BGN-4650","WK-1339","BJE-3888","CC 48","BAQ-5605","BAD-4891","COZ-001","COZ-001-D","COZ-001-P"];
+const COMMON_USAGE_CATEGORIES_DIESEL = ["Vehicle (Restricted)","Generator","Workshop","Other Diesel"];
+const COMMON_USAGE_VEHICLES_DIESEL = [];
+
+function isCommonVehicle(v){return /^common\s*-/i.test((v||'').trim());}
+function commonFuelKind(v){
+  const s=(v||'').trim();
+  if(/petrol/i.test(s)) return 'petrol';
+  if(/diesel/i.test(s)) return 'diesel';
+  return null;
+}
+function commonCategoriesFor(v){
+  const kind=commonFuelKind(v);
+  if(kind==='petrol') return COMMON_USAGE_CATEGORIES_PETROL;
+  if(kind==='diesel') return COMMON_USAGE_CATEGORIES_DIESEL;
+  return [...COMMON_USAGE_CATEGORIES_PETROL,...COMMON_USAGE_CATEGORIES_DIESEL];
+}
+function commonVehiclesFor(v){
+  const kind=commonFuelKind(v);
+  if(kind==='petrol') return COMMON_USAGE_VEHICLES_PETROL;
+  if(kind==='diesel') return COMMON_USAGE_VEHICLES_DIESEL;
+  return [...COMMON_USAGE_VEHICLES_PETROL,...COMMON_USAGE_VEHICLES_DIESEL];
+}
+
+let pendingRows=[];
+let appliedRows=[];
+let rowSeq=0;
+let loadedSeqs=new Set();   // Device Seq No of every report line already loaded (stops double-loading the same PDF)
+let activeSuggestRow=null;
+let activeSuggestIndex=-1;
+const STORAGE_KEY='fuelVoucherAnalysis.v17';
+window.selectedAppliedDays=new Set();
+window.selectedAppliedVouchers=new Set();
+window.openSplitId=null;
+window.editingAppliedId=null;
+
+function esc(s){return (s??'').toString().replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+function jsAttr(s){return encodeURIComponent((s??'').toString());}
+function toggleCard(id){document.getElementById(id).classList.toggle('collapsed');}
+function normalizeSearchText(v){return (v??'').toString().trim().toLowerCase();}
+function uniqueSorted(values){return [...new Set(values.filter(v=>v!==undefined&&v!==null&&String(v).trim()!==''))].sort((a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true}));}
+function fmt2(n){
+  const v=parseFloat(n);
+  if(Number.isNaN(v)) return (n==null?'':String(n));
+  return v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function fmtPrice(v){
+  if(v===''||v==null) return '';
+  const n=parseFloat(v);
+  if(Number.isNaN(n)) return String(v);
+  return 'Rs.'+n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function fmtCost(v){
+  if(v===''||v==null) return '';
+  const n=parseFloat(v);
+  if(Number.isNaN(n)) return String(v);
+  return n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function todayIso(){return new Date().toISOString().slice(0,10);}
+function computeMileage(r){
+  const s=parseFloat(r.meter_start),e=parseFloat(r.meter_end);
+  if(!isNaN(s)&&!isNaN(e)) r.mileage=(e-s).toFixed(2);
+}
+function calcTotal(r){const l=parseFloat(r.liters),p=parseFloat(r.price);if(!Number.isNaN(l)&&!Number.isNaN(p))r.total_cost=(l*p).toFixed(2);}
+
+// Decide SHIFT from the Usage Date time (24h): 06:00–17:59 = DAY, else NIGHT.
+function determineShift(usageDate){
+  const s=String(usageDate||'');
+  const m=s.match(/(\d{1,2}):(\d{2})/);
+  if(!m) return 'DAY';
+  const h=parseInt(m[1],10);
+  return (h>=6 && h<18) ? 'DAY' : 'NIGHT';
+}
+
+// Assign Serial No (1,2,3,...) across applied rows, in current array order.
+function ensureSerials(){
+  appliedRows.forEach((r,i)=>{ r.__serial = i+1; });
+}
+
+/* ---------- PDF reading ---------- */
+function loadPdfJs(){
+  return new Promise((resolve,reject)=>{
+    if(window.pdfjsLib) return resolve();
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    s.onload=()=>{try{pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';resolve();}catch(e){reject(e);}};
+    s.onerror=()=>reject(new Error('could not load the PDF reader library — check your internet connection'));
+    document.head.appendChild(s);
+  });
+}
+async function extractPdfLayout(file){
+  await loadPdfJs();
+  const buf=await file.arrayBuffer();
+  const pdf=await pdfjsLib.getDocument({data:buf}).promise;
+  const pages=[];let text='';
+  for(let p=1;p<=pdf.numPages;p++){
+    const page=await pdf.getPage(p);
+    const vp=page.getViewport({scale:1});
+    const content=await page.getTextContent();
+    pages.push(content.items.map(it=>{
+      const t=pdfjsLib.Util.transform(vp.transform,it.transform);
+      return {str:it.str,x:t[4],y:t[5],w:it.width*vp.scale};
+    }));
+    text+=content.items.map(it=>it.str).join(' ')+'\n';
+  }
+  return {pages,text};
+}
+function normalizeVehicleName(v){
+  let s=String(v||'').replace(/\s+/g,' ').trim();
+  if(!s) return '';
+  if(/^common/i.test(s)) s=s.replace(/\s*-\s*/g,' - ').replace(/\s+/g,' ').trim();
+  return s;
+}
+/* ---------- Mobitel OneFuel: position-based parser ---------- */
+function normFuelName(s){
+  const t=String(s||'').replace(/\s+/g,' ').trim();
+  if(/super/i.test(t)) return 'Super Diesel';
+  if(/diesel/i.test(t)) return 'Diesel';
+  if(/kerosen|kerosin/i.test(t)) return 'Kerosine Oil';
+  if(/petrol/i.test(t)){ if(/95/.test(t)) return 'Petrol 95 Octan'; return 'Petrol 92 Octan'; }
+  return t;
+}
+function cleanMileage(s){
+  const d=String(s||'').replace(/[^\d]/g,'');
+  if(!d||/^0+$/.test(d)||d==='3') return '';   // report prints 3 when the vehicle has no mileage
+  return d.replace(/^0+(?=\d)/,'');
+}
+function parseOneFuelLayout(pages){
+  const num=s=>parseFloat(String(s||'').replace(/,/g,''));
+  let cols=null;
+  for(const items of pages){
+    const hdr=items.find(i=>i.str.trim()==='Emp Id');
+    if(!hdr) continue;
+    const first=items.filter(i=>Math.abs(i.y-hdr.y)<=3 && i.str.trim());
+    const named=first.map(i=>({name:i.str.trim(),cx:i.x+i.w/2,x:i.x})).sort((a,b)=>a.x-b.x);
+    let devSeen=0;
+    cols=named.map(c=>{
+      let key=c.name;
+      if(c.name==='Device'){key=devSeen===0?'seq':'devid';devSeen++;}
+      else if(c.name==='Vehicle') key='vehicle';
+      else if(c.name==='Fuel') key='fuel';
+      else if(c.name==='PPL') key='ppl';
+      else if(c.name==='Fill Up') key='fill';
+      else if(/^Fill up Amt/i.test(c.name)) key='amt';
+      else if(/^Mileage/.test(c.name)) key='mileage';
+      else if(c.name==='DateTime') key='dt';
+      return {key,cx:c.cx};
+    });
+    break;
+  }
+  const need=['seq','vehicle','fuel','ppl','fill','amt','mileage','dt'];
+  if(!cols||need.some(k=>!cols.some(c=>c.key===k))) return {rows:[],bad:[],summary:{},layoutOk:false};
+  const seqCx=cols.find(c=>c.key==='seq').cx;
+  const nearest=cx=>{let b=null,d=1e9;for(const c of cols){const dd=Math.abs(c.cx-cx);if(dd<d){d=dd;b=c;}}return b;};
+  const rows=[],bad=[],seen=new Set();
+  const STOP=/^(\*\*\*|One\(TM\)|Total\b)/i;
+  let allText='';
+  for(const items of pages){
+    allText+=items.map(i=>i.str).join(' ')+'\n';
+    const anchors=items.filter(i=>/^\d{7,10}$/.test(i.str.trim()) && Math.abs((i.x+i.w/2)-seqCx)<30).sort((a,b)=>a.y-b.y);
+    anchors.forEach((a,k)=>{
+      const top=a.y-4;
+      const bottom=Math.min(k+1<anchors.length?anchors[k+1].y-4:1e9, a.y+48);
+      const cell={};
+      items.filter(i=>i.y>=top&&i.y<bottom&&i.str.trim()&&!STOP.test(i.str.trim()))
+        .sort((p,q)=>(Math.abs(p.y-q.y)<2?p.x-q.x:p.y-q.y))
+        .forEach(i=>{const c=nearest(i.x+i.w/2);(cell[c.key]=cell[c.key]||[]).push(i.str.trim());});
+      const g=k=>(cell[k]||[]).join(' ').replace(/\s+/g,' ').trim();
+      const seq=a.str.trim();
+      if(seen.has(seq)) return;
+      const dm=g('dt').match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})\s*(\d{0,2})\s+(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+      const liters=num(g('fill')), ppl=num(g('ppl')), amt=num(g('amt'));
+      const veh=normalizeVehicleName(g('vehicle'));
+      if(!dm||!isFinite(liters)||!veh){bad.push({seq,why:!veh?'vehicle':!dm?'date/time':'litres'});return;}
+      seen.add(seq);
+      let year=dm[3]+(dm[3].length<4?dm[4]:''); if(year.length===2) year='20'+year;
+      let h=parseInt(dm[5],10); const ap=dm[7].toUpperCase();
+      if(ap==='PM'&&h<12) h+=12; if(ap==='AM'&&h===12) h=0;
+      rows.push({seq,vehicle:veh,fuel:normFuelName(g('fuel')),ppl:isFinite(ppl)?ppl:null,amount:isFinite(amt)?amt:null,
+        datetime:`${year}-${dm[2].padStart(2,'0')}-${dm[1].padStart(2,'0')} ${String(h).padStart(2,'0')}:${dm[6]}`,
+        liters:String(liters),meter_end:cleanMileage(g('mileage'))});
+    });
+  }
+  const flat=allText.replace(/\s+/g,' ');
+  const m1=flat.match(/Total Number of Transactions\s*:\s*(\d+)/i);
+  const m2=flat.match(/Total Fill Up Litres\s*:\s*([\d,.]+)/i);
+  const m3=flat.match(/Total Payable Amount\s*\(LKR\)\s*:?\s*([\d,]+\.\d+)/i)||flat.match(/([\d,]+\.\d{2})\s+Total Amount\s*\(LKR\)/i);
+  return {rows,bad,layoutOk:true,summary:{count:m1?+m1[1]:null,litres:m2?num(m2[1]):null,amount:m3?num(m3[1]):null}};
+}
+
+function parsePumpedRecordText(text){
+  const HEADER_WORDS=new Set([
+    'vehicle','date','time','liters','litres','litre','liter','amount','no','number','id',
+    'usage','used','use','fuel','type','voucher','area','created','by','meter','reading','start','end',
+    'total','cost','price','per','milage','mileage','odometer','pumped','record','qty',
+    'quantity','product','rate','order','bill','invoice','supplier','shift','day','night'
+  ]);
+  const allTokens=String(text||'').split(/\s+/).filter(Boolean);
+  const tokens=allTokens.filter(t=>!HEADER_WORDS.has(t.toLowerCase()));
+  const isDate=t=>/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(t);
+  const isTime=t=>/^\d{1,2}:\d{2}(:\d{2})?$/.test(t);
+  const isAmpm=t=>/^(AM|PM)$/i.test(t);
+  const isNum =t=>/^\d+(\.\d+)?$/.test(t);
+  const isVehLike=t=>{
+    if(!t) return false;
+    if(isDate(t)||isTime(t)||isAmpm(t)) return false;
+    if(/^[\-\/&]+$/.test(t)) return false;
+    if(/^[\d.]+$/.test(t)) return false;
+    if(HEADER_WORDS.has(t.toLowerCase())) return false;
+    return /[A-Za-z]/.test(t);
+  };
+  const anchors=[];
+  for(let i=0;i+3<tokens.length;i++){
+    if(!isDate(tokens[i])) continue;
+    if(!isTime(tokens[i+1])) continue;
+    if(!isAmpm(tokens[i+2])) continue;
+    if(!isNum(tokens[i+3])) continue;
+    anchors.push({i,litersIdx:i+3});
+  }
+  if(!anchors.length) return [];
+  let format='date-first';
+  const t0=tokens[0];
+  if(isVehLike(t0)) format='vehicle-first';
+  else if(!isDate(t0)){
+    const a0=anchors[0];
+    if(a0.i>0 && isVehLike(tokens[a0.i-1])) format='vehicle-first';
+  }
+  const rows=[];
+  if(format==='date-first'){
+    for(let k=0;k<anchors.length;k++){
+      const a=anchors[k];
+      const nextStart=(k+1<anchors.length)?anchors[k+1].i:tokens.length;
+      const parts=[];
+      for(let j=a.litersIdx+1;j<nextStart;j++){
+        const t=tokens[j];
+        if(isDate(t)||isTime(t)||isAmpm(t)) break;
+        if(/^[\-\/&]+$/.test(t)){ if(parts.length){parts.push(t);continue;} break; }
+        if(isNum(t) && !/[A-Za-z]/.test(t)) break;
+        parts.push(t);
+      }
+      const vehicle=normalizeVehicleName(parts.join(' '));
+      if(!vehicle) continue;
+      rows.push({vehicle,datetime:toIso(tokens[a.i],tokens[a.i+1],tokens[a.i+2]),liters:tokens[a.litersIdx]});
+    }
+  } else {
+    for(let k=0;k<anchors.length;k++){
+      const a=anchors[k];
+      const prevEnd=(k>0)?anchors[k-1].litersIdx+1:0;
+      const parts=[];
+      for(let j=prevEnd;j<a.i;j++){
+        const t=tokens[j];
+        if(isDate(t)||isTime(t)||isAmpm(t)) break;
+        if(/^[\-\/&]+$/.test(t)){ if(parts.length){parts.push(t);continue;} }
+        else parts.push(t);
+      }
+      const vehicle=normalizeVehicleName(parts.join(' '));
+      if(!vehicle) continue;
+      rows.push({vehicle,datetime:toIso(tokens[a.i],tokens[a.i+1],tokens[a.i+2]),liters:tokens[a.litersIdx]});
+    }
+  }
+  return rows;
+}
+
+/* ---------- Mobitel OneFuel "Transaction Report" parser ---------- */
+function isOneFuelReport(text){
+  return /OneFuel/i.test(text) || /Transaction\s+Report/i.test(text) && /Fill\s*Up/i.test(text);
+}
+function parseOneFuelText(text){
+  const t=String(text||'').replace(/\s+/g,' ');
+  const FUEL='(Diesel|Super\\s+Diesel|Petrol(?:\\s+(?:92|95)(?:\\s+Octane?)?)?|Kerosene|Auto\\s+Diesel)';
+  // Vehicle No | Fuel | PPL | [Max Limit (L)] ... Fill Up Litres | Excess | Ex Amt | DateTime (dd/mm/yyyy, year may be split)
+  const re=new RegExp(
+    '([A-Z0-9]{1,3}\\s?-\\s?\\d{3,4})\\s+'+FUEL+'\\s+([\\d,.]+)\\s+'+      // vehicle, fuel, PPL
+    '([\\d,.]+)\\s+([\\d,.]+)\\s+([\\d,.]+)\\s+'+                          // Fill Up L, Excess L, Ex Amt
+    '(\\d{1,2})/(\\d{1,2})/(\\d{2,4})\\s*(\\d{0,2})\\s+(\\d{1,2}):(\\d{2})\\s*(AM|PM)','gi');
+  const rows=[];let m;
+  while((m=re.exec(t))){
+    const g=m;
+    const vehicle=g[1].replace(/\s+/g,'');
+    const fuelType=g[2].replace(/\s+/g,' ').trim();
+    const ppl2=g[3], fill=g[4];
+    const day=g[7].padStart(2,'0'), mon=g[8].padStart(2,'0');
+    let year=g[9]+(g[9].length<4?g[10]:'');
+    if(year.length===2) year='20'+year;
+    let h=parseInt(g[11],10); const ap2=g[13].toUpperCase();
+    if(ap2==='PM'&&h<12) h+=12; if(ap2==='AM'&&h===12) h=0;
+    const litersNum=parseFloat(String(fill).replace(/,/g,''));
+    if(!isFinite(litersNum)) continue;
+    rows.push({
+      vehicle:normalizeVehicleName(vehicle),
+      fuel:fuelType,
+      ppl:parseFloat(String(ppl2).replace(/,/g,'')),
+      datetime:`${year}-${mon}-${day} ${String(h).padStart(2,'0')}:${g[12]}`,
+      liters:String(litersNum)
+    });
+  }
+  return rows;
+}
+function toIso(dateTok,timeTok,ampmTok){
+  const dm=dateTok.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  const tm=timeTok.match(/^(\d{1,2}):(\d{2})/);
+  if(!dm||!tm) return '';
+  const mo=dm[1].padStart(2,'0'), da=dm[2].padStart(2,'0');
+  let yr=dm[3]; if(yr.length===2) yr='20'+yr;
+  let hh=parseInt(tm[1],10); const mins=tm[2], ap=(ampmTok||'').toUpperCase();
+  if(ap==='PM'&&hh<12) hh+=12;
+  if(ap==='AM'&&hh===12) hh=0;
+  return `${yr}-${mo}-${da} ${String(hh).padStart(2,'0')}:${mins}`;
+}
+function fmtMoney(n){return (n==null||isNaN(n))?'—':Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function showUploadSummary(info){
+  const box=document.getElementById('uploadSummary');
+  const notTaken=info.reportCount!=null?Math.max(0,info.reportCount-info.taken-info.dups):info.bad.length;
+  const allOk=notTaken===0&&info.bad.length===0;
+  let h=`<div class="up-summary ${allOk?'ok':'bad'}">`;
+  if(info.reportCount!=null)
+    h+=`<div class="big ${allOk?'ok-t':'bad-t'}">${allOk?'✓':'⚠'} ${info.taken+info.dups} of ${info.reportCount} transactions in the report were read &nbsp;·&nbsp; ${notTaken} NOT taken</div>`;
+  else
+    h+=`<div class="big ${allOk?'ok-t':'bad-t'}">${allOk?'✓':'⚠'} ${info.taken} transactions read (the report did not state a total) &nbsp;·&nbsp; ${info.bad.length} NOT taken</div>`;
+  h+=`<div><b>${info.taken}</b> new transaction${info.taken===1?'':'s'} added`+(info.dups?` &nbsp;·&nbsp; <b>${info.dups}</b> already loaded earlier (skipped, no duplicates)`:'')+'</div>';
+  if(info.bad.length||info.missing.length){
+    const ids=[...new Set([...info.bad.map(b=>b.seq),...info.missing])];
+    h+=`<div class="bad-t">Not taken — Device Seq No: ${esc(ids.slice(0,25).join(', '))}${ids.length>25?' …':''}</div>`;
+  }
+  if(info.reportLitres!=null){
+    const okL=Math.abs(info.reportLitres-info.sumLitres)<0.005;
+    h+=`<div>Litres: <b>${fmtMoney(info.sumLitres)} L</b> read vs <b>${fmtMoney(info.reportLitres)} L</b> in report <span class="${okL?'ok-t':'bad-t'}">${okL?'✓ match':'✗ differs'}</span></div>`;
+  }
+  if(info.reportAmount!=null){
+    const okA=Math.abs(info.reportAmount-info.sumAmount)<0.51;
+    h+=`<div>Amount: <b>Rs. ${fmtMoney(info.sumAmount)}</b> read vs <b>Rs. ${fmtMoney(info.reportAmount)}</b> in report <span class="${okA?'ok-t':'bad-t'}">${okA?'✓ match':'✗ differs'}</span></div>`;
+  }
+  h+='<div>'+Object.entries(info.fuelCounts).map(([k,v])=>`<span class="chip">${esc(k)} × ${v}</span>`).join('')+'</div>';
+  if(info.commonCount) h+=`<div><span class="chip" style="background:#efe6f7;color:#6a3fa0">Common - Petrol/Diesel × ${info.commonCount}</span> need Area + <b>Split usage</b>.</div>`;
+  if(info.noMileage) h+=`<div class="hint">${info.noMileage} line${info.noMileage===1?'':'s'} show mileage 3 / none in the report → Meter Reading End left blank.</div>`;
+  h+='<div style="margin-top:8px"><button class="primary" onclick="showPage(\'pending\')">Continue → Pending transactions</button></div></div>';
+  box.innerHTML=h;
+}
+async function handlePumpedPdfUpload(input){
+  const file=input.files[0];if(!file)return;
+  const status=document.getElementById('pdfUploadStatus');
+  document.getElementById('uploadSummary').innerHTML='';
+  status.textContent='Reading PDF…';
+  try{
+    const {pages,text}=await extractPdfLayout(file);
+    let parsed=[],bad=[],meta={count:null,litres:null,amount:null};
+    const lay=parseOneFuelLayout(pages);
+    if(lay.layoutOk&&lay.rows.length){parsed=lay.rows;bad=lay.bad;meta=lay.summary;}
+    if(!parsed.length&&isOneFuelReport(text)) parsed=parseOneFuelText(text);
+    if(!parsed.length) parsed=parsePumpedRecordText(text);
+    if(!parsed.length){status.textContent='Could not find transaction rows in that PDF.';input.value='';return;}
+
+    const fresh=[];let dups=0;
+    parsed.forEach(p=>{
+      if(p.seq&&loadedSeqs.has(p.seq)){dups++;return;}
+      fresh.push(p);
+    });
+    const newRows=fresh.map(p=>{
+      const row={
+        __id:'r'+(rowSeq++),__seq:p.seq||'',
+        __selected:false,__areaConfirmed:false,__isSplitChild:false,
+        usage_id:'',vehicle:p.vehicle,fuel_type:p.fuel?normFuelName(p.fuel):'',usage_date:p.datetime,liters:p.liters,
+        shift:determineShift(p.datetime),
+        price:(p.ppl!=null&&!isNaN(p.ppl))?String(p.ppl):'',total_cost:'',mileage:'',voucher:'',area:'',
+        created_date:'',created_by:'',meter_start:'',meter_end:p.meter_end||''
+      };
+      calcTotal(row);
+      if(p.seq) loadedSeqs.add(p.seq);
+      return row;
+    });
+    pendingRows.push(...newRows);
+    render();
+
+    // seq numbers that should exist (consecutive run) but were not read
+    const nums=parsed.map(p=>parseInt(p.seq,10)).filter(n=>!isNaN(n)).sort((a,b)=>a-b);
+    const have=new Set(nums),missing=[];
+    if(nums.length&&meta.count!=null&&nums.length<meta.count){
+      for(let n=nums[0];n<=nums[nums.length-1]&&missing.length<200;n++) if(!have.has(n)) missing.push(String(n));
+    }
+    const fuelCounts={};
+    parsed.forEach(p=>{const k=(p.fuel||'Unknown')+(p.ppl!=null?' @ Rs.'+p.ppl.toFixed(2):'');fuelCounts[k]=(fuelCounts[k]||0)+1;});
+    showUploadSummary({
+      taken:newRows.length,dups,bad,missing,reportCount:meta.count,reportLitres:meta.litres,reportAmount:meta.amount,
+      sumLitres:parsed.reduce((s,p)=>s+(parseFloat(p.liters)||0),0),
+      sumAmount:parsed.reduce((s,p)=>s+(p.amount!=null?p.amount:(parseFloat(p.liters)||0)*(p.ppl||0)),0),
+      fuelCounts,commonCount:parsed.filter(p=>isCommonVehicle(p.vehicle)).length,
+      noMileage:parsed.filter(p=>!p.meter_end).length
+    });
+    status.textContent='Upload finished — continue in section 2.';
+  }catch(e){status.textContent='Could not read that PDF: '+e.message;}
+  input.value='';
+}
+
+
+/* ---------- Vehicle → Area list: view / edit / download / upload (saved in this browser) ---------- */
+const AREA_STORE_KEY='fuelVoucherAnalysis.vehicleAreas.v1';
+const DEFAULT_VEHICLE_AREAS=JSON.parse(JSON.stringify(VEHICLE_AREAS));
+function saveAreaList(){try{localStorage.setItem(AREA_STORE_KEY,JSON.stringify(VEHICLE_AREAS));}catch(e){}}
+function registerAreas(){Object.values(VEHICLE_AREAS).flat().forEach(a=>{if(a&&!AREA_LIST.includes(a))AREA_LIST.push(a);});}
+function loadAreaList(){
+  try{const raw=localStorage.getItem(AREA_STORE_KEY);if(raw){const m=JSON.parse(raw);if(m&&typeof m==='object')VEHICLE_AREAS=m;}}catch(e){}
+  registerAreas();
+}
+function areaPairs(){
+  const out=[];
+  Object.keys(VEHICLE_AREAS).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true,sensitivity:'base'}))
+    .forEach(v=>(VEHICLE_AREAS[v]||[]).forEach(a=>out.push([v,a])));
+  return out;
+}
+function setAreaStatus(msg,bad){const el=document.getElementById('areaListStatus');if(el){el.textContent=msg;el.style.color=bad?'var(--red)':'var(--green)';}}
+function renderAreaList(){
+  const box=document.getElementById('areaListTable');if(!box)return;
+  const q=normalizeSearchText(document.getElementById('areaListSearch')?.value);
+  const vehs=Object.keys(VEHICLE_AREAS).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true,sensitivity:'base'}))
+    .filter(v=>!q||normalizeSearchText(v).includes(q)||(VEHICLE_AREAS[v]||[]).some(a=>normalizeSearchText(a).includes(q)));
+  document.getElementById('areaListCount').textContent=Object.keys(VEHICLE_AREAS).length+' vehicles';
+  let h='<table><thead><tr><th>#</th><th>Vehicle Number</th><th>Area (first = suggested; separate several with ;)</th><th></th></tr></thead><tbody>';
+  vehs.forEach((v,i)=>{
+    h+=`<tr><td>${i+1}</td><td><b>${esc(v)}</b></td><td><input type="text" style="border:1px solid var(--line);background:#fff;min-width:300px" value="${esc((VEHICLE_AREAS[v]||[]).join('; '))}" onchange="editAreaRow(decodeURIComponent('${jsAttr(v)}'),this.value)"></td>
+      <td><button class="danger row-action" onclick="deleteAreaRow(decodeURIComponent('${jsAttr(v)}'))">✕ Remove</button></td></tr>`;
+  });
+  h+='</tbody></table>';
+  box.innerHTML=vehs.length?h:'<div class="empty-state">No vehicles match.</div>';
+}
+function splitAreas(s){return String(s||'').split(';').map(x=>x.trim()).filter(Boolean);}
+function editAreaRow(v,value){
+  const a=splitAreas(value);
+  if(a.length) VEHICLE_AREAS[v]=a; else delete VEHICLE_AREAS[v];
+  registerAreas();saveAreaList();renderAreaList();render();setAreaStatus('Saved — '+v+' updated.');
+}
+function deleteAreaRow(v){delete VEHICLE_AREAS[v];saveAreaList();renderAreaList();render();setAreaStatus('Removed '+v+'.');}
+function addAreaRow(){
+  const v=document.getElementById('newAreaVeh').value.trim(),a=splitAreas(document.getElementById('newAreaName').value);
+  if(!v||!a.length){alert('Enter both a Vehicle Number and an Area.');return;}
+  VEHICLE_AREAS[v]=a;registerAreas();saveAreaList();
+  document.getElementById('newAreaVeh').value='';document.getElementById('newAreaName').value='';
+  renderAreaList();render();setAreaStatus('Saved — '+v+' added.');
+}
+function resetAreaList(){
+  if(!confirm('Replace the saved list with the built-in list? Your edits and uploads will be lost (download first if you want a backup).'))return;
+  VEHICLE_AREAS=JSON.parse(JSON.stringify(DEFAULT_VEHICLE_AREAS));
+  try{localStorage.removeItem(AREA_STORE_KEY);}catch(e){}
+  registerAreas();renderAreaList();render();setAreaStatus('Built-in list restored.');
+}
+async function downloadAreaList(fmt){
+  const pairs=areaPairs();
+  if(!pairs.length){alert('The list is empty.');return;}
+  const name='Vehicle_Area_List_'+todayIso();
+  if(fmt==='csv'){
+    const q=v=>/[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;
+    saveBlob(new Blob(['\ufeffVehicle Number,Area\n'+pairs.map(p=>q(p[0])+','+q(p[1])).join('\n')],{type:'text/csv;charset=utf-8;'}),name+'.csv');
+    return;
+  }
+  try{
+    await loadScriptOnce(EXCELJS_URL,()=>!!window.ExcelJS);
+    const wb=new window.ExcelJS.Workbook();const ws=wb.addWorksheet('Vehicle Areas',{views:[{state:'frozen',ySplit:1}]});
+    ws.columns=[{header:'Vehicle Number',key:'v',width:24},{header:'Area',key:'a',width:42}];
+    const g={style:'thin',color:{argb:'FF999999'}},border={top:g,left:g,bottom:g,right:g};
+    ws.getRow(1).eachCell(c=>{c.font={bold:true};c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFEEEEEE'}};c.border=border;c.alignment={horizontal:'center',vertical:'middle'};});
+    pairs.forEach(p=>{const r=ws.addRow({v:p[0],a:p[1]});r.eachCell(c=>{c.border=border;});});
+    ws.autoFilter={from:'A1',to:'B1'};
+    saveBlob(new Blob([await wb.xlsx.writeBuffer()],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),name+'.xlsx');
+  }catch(e){alert('Could not build the Excel file ('+e.message+'). Use "Download CSV" instead.');}
+}
+function parseCsvText(text){
+  const rows=[];let row=[],cur='',q=false;
+  text=String(text||'').replace(/^\ufeff/,'');
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=c; }
+    else if(c==='"') q=true;
+    else if(c===','||c===';'&&false){row.push(cur);cur='';}
+    else if(c==='\n'){row.push(cur);rows.push(row);row=[];cur='';}
+    else if(c!=='\r') cur+=c;
+  }
+  if(cur!==''||row.length){row.push(cur);rows.push(row);}
+  return rows;
+}
+function xlCellText(v){
+  if(v==null) return '';
+  if(typeof v==='object'){ if(v.richText) return v.richText.map(t=>t.text).join(''); if(v.text!=null) return String(v.text); if(v.result!=null) return String(v.result); return ''; }
+  return String(v);
+}
+async function uploadAreaList(input){
+  const file=input.files[0];if(!file)return;
+  try{
+    let rows=[];
+    if(/\.csv$/i.test(file.name)||file.type==='text/csv'){
+      rows=parseCsvText(new TextDecoder('utf-8').decode(await file.arrayBuffer()));
+    }else{
+      await loadScriptOnce(EXCELJS_URL,()=>!!window.ExcelJS);
+      const wb=new window.ExcelJS.Workbook();await wb.xlsx.load(await file.arrayBuffer());
+      const ws=wb.worksheets[0];if(!ws) throw new Error('the workbook has no sheet');
+      ws.eachRow({includeEmpty:false},row=>{const vals=[];row.eachCell({includeEmpty:true},(c,i)=>{vals[i-1]=xlCellText(c.value);});rows.push(vals);});
+    }
+    rows=rows.map(r=>(r||[]).map(x=>String(x??'').trim())).filter(r=>r.some(Boolean));
+    if(!rows.length) throw new Error('the file is empty');
+    let vi=0,ai=1,start=0;
+    const head=rows[0].map(x=>x.toLowerCase());
+    const hv=head.findIndex(x=>/vehicle/.test(x)),ha=head.findIndex(x=>/area/.test(x));
+    if(hv>=0&&ha>=0){vi=hv;ai=ha;start=1;}
+    const incoming={};let n=0;
+    rows.slice(start).forEach(r=>{
+      const v=(r[vi]||'').trim(),a=(r[ai]||'').trim();
+      if(!v||!a) return;
+      splitAreas(a).forEach(x=>{(incoming[v]=incoming[v]||[]);if(!incoming[v].includes(x)){incoming[v].push(x);n++;}});
+    });
+    const vehCount=Object.keys(incoming).length;
+    if(!vehCount) throw new Error('no "Vehicle Number" + "Area" rows found');
+    const mode=document.getElementById('areaUploadMode').value;
+    let added=0,updated=0;
+    if(mode==='replace'){
+      if(!confirm('Replace the whole list with the '+vehCount+' vehicles in this file?')){input.value='';return;}
+      VEHICLE_AREAS=incoming;added=vehCount;
+    }else{
+      Object.keys(incoming).forEach(v=>{
+        if(VEHICLE_AREAS[v]){ if(VEHICLE_AREAS[v].join('|')!==incoming[v].join('|')) updated++; } else added++;
+        VEHICLE_AREAS[v]=incoming[v];
+      });
+    }
+    registerAreas();saveAreaList();renderAreaList();render();
+    setAreaStatus('✓ '+vehCount+' vehicle'+(vehCount===1?'':'s')+' read from "'+file.name+'" — '+(mode==='replace'?'list replaced':added+' added, '+updated+' updated')+'. Saved in this browser.');
+  }catch(e){setAreaStatus('Could not read that file: '+e.message,true);}
+  input.value='';
+}
+
+/* ---------- Area helpers ---------- */
+function areaSuggestions(vehicle,query){
+  const q=(query||'').trim().toLowerCase();
+  const vehicleAreas=VEHICLE_AREAS[vehicle]||[];
+  const preferred=[...vehicleAreas,...AREA_LIST.filter(a=>!vehicleAreas.includes(a))];
+  return preferred.filter(a=>!q||a.toLowerCase().includes(q)).slice(0,10);
+}
+function suggestedArea(vehicle){return (VEHICLE_AREAS[vehicle]||[])[0]||'';}
+
+/* ---------- Tick all suggested areas ---------- */
+function tickAllSuggestedAreas(){
+  if(!pendingRows.length){alert('No pending transactions loaded yet.');return;}
+  let filled=0, alreadyConfirmed=0, noSuggestion=0, commonSkipped=0;
+  pendingRows.forEach(r=>{
+    if(isCommonVehicle(r.vehicle)){commonSkipped++;return;}
+    if(r.__areaConfirmed && r.area){alreadyConfirmed++;return;}
+    const sug=suggestedArea(r.vehicle);
+    if(sug){ r.area=sug; r.__areaConfirmed=true; filled++; }
+    else noSuggestion++;
+  });
+  render();
+  const bits=[];
+  bits.push(filled+' row'+(filled===1?'':'s')+' auto-filled & confirmed');
+  if(alreadyConfirmed) bits.push(alreadyConfirmed+' already confirmed');
+  if(commonSkipped) bits.push(commonSkipped+' Common row'+(commonSkipped===1?'':'s')+' skipped (need Split usage)');
+  if(noSuggestion) bits.push(noSuggestion+' without a suggestion (enter manually)');
+  alert('✓ Tick suggested areas:\n\n'+bits.join('\n'));
+}
+
+/* ---------- Status / stats ---------- */
+function rowStatus(r){
+  if(isCommonVehicle(r.vehicle)) return 'purple';
+  if(!r.__areaConfirmed||!r.area) return 'red';
+  return 'amber';
+}
+let currentPage='upload';
+function showPage(name){
+  currentPage=name;
+  document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.dataset.page===name));
+  document.querySelectorAll('#pageNav .tab').forEach(t=>t.classList.toggle('active',t.dataset.page===name));
+  updateStatsVisibility();updateBulkbar();
+  window.scrollTo({top:0});
+}
+function updateStatsVisibility(){
+  const hasData=pendingRows.length||appliedRows.length;
+  document.getElementById('stats').style.display=(hasData&&(currentPage==='pending'||currentPage==='applied'))?'flex':'none';
+}
+function render(){
+  const hasData=pendingRows.length||appliedRows.length;
+  updateStatsVisibility();
+  ensureSerials();
+  document.getElementById('tabPending').textContent=pendingRows.length;
+  document.getElementById('tabApplied').textContent=appliedRows.length;
+  if(!hasData){
+    document.getElementById('pendingTable').innerHTML='<div class="empty-state">No pending transactions yet — upload a report on the Upload page.</div>';
+    document.getElementById('appliedBody').innerHTML='<div class="empty-state">No applied vouchers yet.</div>';
+    document.getElementById('dateButtons').innerHTML='';document.getElementById('voucherButtons').innerHTML='';
+    document.getElementById('voucherGroupCount').textContent='0 vouchers';
+    updateBulkbar();return;
+  }
+  refreshStatsOnly();
+  renderPending();
+  renderApplied();
+  updateBulkbar();saveWorkspace();
+}
+function refreshStatsOnly(){
+  const missing=pendingRows.filter(r=>!isCommonVehicle(r.vehicle)&&(!r.__areaConfirmed||!r.area)).length;
+  const needsSplit=pendingRows.filter(r=>isCommonVehicle(r.vehicle)).length;
+  document.getElementById('statPending').textContent=pendingRows.length;
+  document.getElementById('statMissingArea').textContent=missing;
+  document.getElementById('statSplitStat').style.display=needsSplit?'block':'none';
+  document.getElementById('statNeedsSplit').textContent=needsSplit;
+  document.getElementById('statReady').textContent=pendingRows.filter(r=>rowStatus(r)==='amber').length;
+  document.getElementById('statApplied').textContent=appliedRows.length;
+}
+
+/* ---------- Pending table ---------- */
+function pendingMatchesSearch(r,q){
+  if(!q) return true;
+  const n=normalizeSearchText(q);
+  return [r.vehicle,r.usage_id,r.liters,r.total_cost,r.area,r.voucher,r.fuel_type,r.usage_date].map(normalizeSearchText).some(v=>v.includes(n));
+}
+function renderPending(){
+  const query=document.getElementById('pendingSearch')?.value.trim()||'';
+  const visible=pendingRows.filter(r=>pendingMatchesSearch(r,query));
+  let html='<table><thead><tr><th>Select</th><th>Status</th>';
+  PENDING_COLS.forEach(c=>html+='<th>'+esc(c.label)+'</th>');
+  html+='</tr></thead><tbody>';
+  visible.forEach(r=>{
+    const st=rowStatus(r),canSelect=st==='amber';
+    const rowCls=`status-${st} ${r.__selected?'selected':''}`;
+    html+=`<tr class="${rowCls}" data-id="${r.__id}">`;
+    html+=`<td><input type="checkbox" ${r.__selected?'checked':''} ${canSelect?'':'disabled'} title="${canSelect?'Select transaction':(st==='purple'?'Split this Common row first':'Enter and confirm Area first')}" onchange="toggleRow('${r.__id}',this.checked)"></td>`;
+    html+=`<td>${st==='red'?'<span class="badge red">Area needed</span>':st==='purple'?'<span class="badge purple">Split usage</span>':'<span class="badge amber">Ready</span>'}</td>`;
+    PENDING_COLS.forEach(c=>html+='<td>'+pendingCellHtml(r,c.key)+'</td>');
+    html+='</tr>';
+    if(isCommonVehicle(r.vehicle) && window.openSplitId===r.__id) html+=splitRowHtml(r);
+  });
+  html+='</tbody></table>';
+  document.getElementById('pendingTable').innerHTML=visible.length?html:'<div class="empty-state">'+(pendingRows.length?'No pending transactions match your search.':'No pending transactions — everything is applied, or upload a new report.')+'</div>';
+  const ph=document.getElementById('pendingSearchHint');
+  if(ph) ph.textContent=query?`${visible.length} matching transaction${visible.length===1?'':'s'} found`:`${pendingRows.length} pending transactions`;
+}
+function pendingCellHtml(r,key){
+  if(key==='vehicle'){
+    const locked=`<span class="locked-cell">${esc(r.vehicle)}<span class="lock-ic" title="Locked — set from uploaded file">🔒</span></span>`;
+    if(isCommonVehicle(r.vehicle)){
+      const isOpen=window.openSplitId===r.__id;
+      return `<div class="vehicle-cell">${locked}<button class="split-btn warn" onclick="openSplitDialog('${r.__id}')">${isOpen?'Editing split…':'Split usage'}</button></div>`;
+    }
+    if(r.__isSplitChild){
+      return `<div class="vehicle-cell">${locked}<span class="badge purple" title="Created from a Common split">split line</span></div>`;
+    }
+    return locked;
+  }
+  if(key==='usage_date') return r.usage_date?`<span class="locked-cell">${esc(r.usage_date)}<span class="lock-ic" title="Locked">🔒</span></span>`:'<span class="hint">—</span>';
+  if(key==='liters')     return r.liters?`<span class="locked-cell">${esc(r.liters)}<span class="lock-ic" title="Locked">🔒</span></span>`:'<span class="hint">—</span>';
+  if(key==='fuel_type') return r.fuel_type?`<span class="locked-cell">${esc(r.fuel_type)}<span class="lock-ic" title="Locked — read from the report">🔒</span></span>`:'<span class="hint">—</span>';
+  if(key==='price') return (r.price!==''&&r.price!=null)?`<span class="locked-cell">${esc(fmtPrice(r.price))}<span class="lock-ic" title="Locked — read from the report">🔒</span></span>`:'<span class="hint">—</span>';
+  if(key==='meter_start'||key==='meter_end'){
+    return `<input type="text" value="${esc(r[key]||'')}" placeholder="${key==='meter_end'?'none in report':'Add reading'}" oninput="updateMeterField('${r.__id}','${key}',this.value)">`;
+  }
+  if(key==='area'){
+    const sug=suggestedArea(r.vehicle);
+    const displayVal=r.area||sug||'';
+    return `<div class="area-cell"><div class="area-wrap">
+      <input class="area-input ${r.__areaConfirmed?'confirmed':''}" type="text" value="${esc(displayVal)}" placeholder="Type Area…" autocomplete="off"
+        onfocus="openAreaSuggest('${r.__id}',this.value)" oninput="areaTyping('${r.__id}',this.value)" onkeydown="areaKeydown(event,'${r.__id}')">
+      <div class="area-suggest" id="suggest-${r.__id}"></div>
+    </div><button class="area-ok ${r.__areaConfirmed?'':'pending'}" onclick="confirmArea('${r.__id}')">✓ OK</button></div>`;
+  }
+  return `<span class="hint">—</span>`;
+}
+function updateMeterField(id,key,value){
+  const r=findRow(id);if(!r)return;
+  r[key]=value;computeMileage(r);saveWorkspace();
+}
+
+/* ---------- Split dialog ---------- */
+function openSplitDialog(id){
+  const r=findRow(id);if(!r)return;
+  if(window.openSplitId===id){ window.openSplitId=null; renderPending(); return; }
+  if(!r.__splitDraft) r.__splitDraft=[{label:'',liters:'',meter_start:'',meter_end:''}];
+  window.openSplitId=id;
+  renderPending();
+}
+function closeSplitDialog(id){
+  if(window.openSplitId===id) window.openSplitId=null;
+  renderPending();
+}
+function addSplitLine(id){
+  const r=findRow(id);if(!r)return;
+  r.__splitDraft=r.__splitDraft||[];
+  r.__splitDraft.push({label:'',liters:'',meter_start:'',meter_end:''});
+  renderPending();
+}
+function removeSplitLine(id,idx){
+  const r=findRow(id);if(!r||!r.__splitDraft)return;
+  r.__splitDraft.splice(idx,1);
+  renderPending();
+}
+function updateSplitLine(id,idx,field,value){
+  const r=findRow(id);if(!r||!r.__splitDraft||!r.__splitDraft[idx])return;
+  r.__splitDraft[idx][field]=value;
+  updateSplitBadge(id);
+  saveWorkspace();
+}
+function updateSplitBadge(id){
+  const r=findRow(id);if(!r)return;
+  const badge=document.getElementById('splitTotal-'+id);if(!badge)return;
+  const target=parseFloat(r.liters)||0;
+  const total=(r.__splitDraft||[]).reduce((s,l)=>s+(parseFloat(l.liters)||0),0);
+  const diff=total-target, ok=Math.abs(diff)<0.01 && (r.__splitDraft||[]).length>0;
+  badge.className='badge '+(ok?'green':'red');
+  badge.textContent='Split total '+total.toFixed(2)+' of '+target.toFixed(2)+' L'+(ok?' — balanced':diff>0?' — '+diff.toFixed(2)+' too much':' — '+Math.abs(diff).toFixed(2)+' short');
+  const btn=document.getElementById('splitConfirm-'+id);
+  if(btn) btn.disabled=!ok;
+}
+function splitLabelSelectHtml(rowId,idx,label,vehicle){
+  const cats=commonCategoriesFor(vehicle),vehs=commonVehiclesFor(vehicle);
+  const known=new Set([...cats,...vehs]);
+  const isOther=!!label && !known.has(label);
+  let html=`<select onchange="handleSplitLabelSelect('${rowId}',${idx},this.value)">`;
+  html+=`<option value="" ${label?'':'selected'}>— select —</option>`;
+  html+=`<optgroup label="Category">`+cats.map(c=>`<option value="${esc(c)}" ${c===label?'selected':''}>${esc(c)}</option>`).join('')+`</optgroup>`;
+  if(vehs.length) html+=`<optgroup label="Specific vehicle / staff bike">`+vehs.map(c=>`<option value="${esc(c)}" ${c===label?'selected':''}>${esc(c)}</option>`).join('')+`</optgroup>`;
+  html+=`<option value="__other__" ${isOther?'selected':''}>Other (type manually)</option>`;
+  html+=`</select>`;
+  if(isOther) html+=`<input type="text" style="margin-top:4px" value="${esc(label)}" placeholder="Type who/what this fuel went to" oninput="updateSplitLine('${rowId}',${idx},'label',this.value)">`;
+  return html;
+}
+function handleSplitLabelSelect(rowId,idx,value){
+  updateSplitLine(rowId,idx,'label',value==='__other__'?'':value);
+  renderPending();
+}
+function splitRowHtml(r){
+  const target=parseFloat(r.liters)||0;
+  const draft=r.__splitDraft||[];
+  const total=draft.reduce((s,l)=>s+(parseFloat(l.liters)||0),0);
+  const diff=total-target, ok=Math.abs(diff)<0.01 && draft.length>0;
+  const kind=commonFuelKind(r.vehicle);
+  const kindNote=kind?` — showing ${kind} bikes/equipment only`:'';
+  let html=`<tr class="breakdown-row" data-breakdown-for="${r.__id}"><td colspan="${PENDING_COLS.length+2}"><div class="breakdown-panel">
+    <div class="breakdown-head"><strong>Split "${esc(r.vehicle)}" — ${esc(r.liters)} L pumped${esc(kindNote)}. The split total must match exactly; confirming creates one ready row per line.</strong>
+      <button class="ghost mini-clear" onclick="closeSplitDialog('${r.__id}')">Close</button></div>
+    <table class="breakdown-table"><thead><tr>
+      <th>Used by (category or vehicle)</th><th class="num">Liters</th><th>Meter Reading Start</th><th>Meter Reading End</th><th></th>
+    </tr></thead><tbody>`;
+  draft.forEach((l,idx)=>{
+    html+=`<tr>
+      <td>${splitLabelSelectHtml(r.__id,idx,l.label||'',r.vehicle)}</td>
+      <td class="num"><input type="number" step="0.01" value="${esc(l.liters)}" oninput="updateSplitLine('${r.__id}',${idx},'liters',this.value)"></td>
+      <td><input type="text" value="${esc(l.meter_start||'')}" placeholder="e.g. 12345" oninput="updateSplitLine('${r.__id}',${idx},'meter_start',this.value)"></td>
+      <td><input type="text" value="${esc(l.meter_end||'')}" placeholder="e.g. 12410" oninput="updateSplitLine('${r.__id}',${idx},'meter_end',this.value)"></td>
+      <td><button class="ghost mini-clear" onclick="removeSplitLine('${r.__id}',${idx})">Remove</button></td>
+    </tr>`;
+  });
+  if(!draft.length) html+=`<tr><td colspan="5" class="hint" style="padding:8px 6px">No lines yet — add who this fuel actually went to.</td></tr>`;
+  html+=`</tbody></table>
+    <div class="row" style="margin-top:8px">
+      <button class="ghost" onclick="addSplitLine('${r.__id}')">+ Add line</button>
+      <span id="splitTotal-${r.__id}" class="badge ${ok?'green':'red'}">Split total ${total.toFixed(2)} of ${target.toFixed(2)} L${ok?' — balanced':diff>0?' — '+diff.toFixed(2)+' too much':' — '+Math.abs(diff).toFixed(2)+' short'}</span>
+      <button id="splitConfirm-${r.__id}" class="primary" onclick="confirmSplit('${r.__id}')" ${ok?'':'disabled'}>Confirm split → create rows</button>
+    </div>
+  </div></td></tr>`;
+  return html;
+}
+function confirmSplit(id){
+  const r=findRow(id);if(!r)return;
+  const target=parseFloat(r.liters)||0;
+  const draft=r.__splitDraft||[];
+  const total=draft.reduce((s,l)=>s+(parseFloat(l.liters)||0),0);
+  if(Math.abs(total-target)>=0.01){alert('Split total must match '+target.toFixed(2)+' L exactly.');return;}
+  if(!draft.length || draft.some(l=>!l.label||!l.liters)){alert('Each split line needs a "Used by" label and liters.');return;}
+  const parentFuel=r.fuel_type||'';
+  const kindDefault=commonFuelKind(r.vehicle)==='petrol'?'Petrol 92 Octan':commonFuelKind(r.vehicle)==='diesel'?'Diesel':'';
+  const children=draft.map(l=>({
+    __id:'r'+(rowSeq++),__isSplitChild:true,__splitParentVehicle:r.vehicle,
+    __selected:false,__areaConfirmed:false,
+    __seq:r.__seq||'',
+    usage_id:r.usage_id||'',vehicle:l.label,fuel_type:parentFuel||kindDefault,
+    usage_date:r.usage_date||'',liters:l.liters,shift:r.shift||determineShift(r.usage_date),
+    price:r.price||'',total_cost:'',
+    mileage:'',voucher:'',area:'',created_date:r.created_date||'',
+    created_by:r.created_by||'',meter_start:l.meter_start||'',meter_end:l.meter_end||''
+  }));
+  children.forEach(c=>{computeMileage(c);calcTotal(c);});
+  const idx=pendingRows.indexOf(r);
+  if(idx>=0) pendingRows.splice(idx,1,...children);
+  window.openSplitId=null;
+  render();
+}
+
+/* ---------- Area confirm ---------- */
+function openAreaSuggest(id,query){activeSuggestRow=id;activeSuggestIndex=-1;drawSuggestions(id,query);}
+function areaTyping(id,value){
+  const r=findRow(id);if(!r)return;
+  r.area=value;r.__areaConfirmed=false;r.__selected=false;
+  drawSuggestions(id,value);updateBulkbar();refreshStatsOnly();saveWorkspace();
+}
+function drawSuggestions(id,query){
+  const r=findRow(id),box=document.getElementById('suggest-'+id);if(!r||!box)return;
+  const arr=areaSuggestions(r.vehicle,query);
+  if(!arr.length){box.innerHTML='';box.classList.remove('show');return;}
+  box.innerHTML=arr.map((a,i)=>`<div class="area-option ${i===activeSuggestIndex?'active':''}" onmousedown="chooseArea('${r.__id}',decodeURIComponent('${jsAttr(a)}'))">${esc(a)}</div>`).join('');
+  box.classList.add('show');
+}
+function chooseArea(id,value){
+  const r=findRow(id);if(!r)return;
+  r.area=value;r.__areaConfirmed=false;activeSuggestRow=id;activeSuggestIndex=-1;closeSuggestions();renderPending();
+  const input=document.querySelector(`tr[data-id="${id}"] .area-input`);if(input){input.value=value;input.focus();}
+}
+function areaKeydown(e,id){
+  const r=findRow(id);if(!r)return;const list=areaSuggestions(r.vehicle,r.area);
+  if(e.key==='ArrowDown'){e.preventDefault();activeSuggestIndex=Math.min(activeSuggestIndex+1,list.length-1);drawSuggestions(id,r.area);}
+  else if(e.key==='ArrowUp'){e.preventDefault();activeSuggestIndex=Math.max(activeSuggestIndex-1,0);drawSuggestions(id,r.area);}
+  else if(e.key==='Enter'||e.key==='Tab'){if(activeSuggestIndex>=0&&list[activeSuggestIndex]){e.preventDefault();chooseArea(id,list[activeSuggestIndex]);}else if(r.area.trim()){confirmArea(id);}}
+  else if(e.key==='Escape')closeSuggestions();
+}
+document.addEventListener('click',e=>{if(!e.target.closest('.area-wrap'))closeSuggestions();});
+function closeSuggestions(){document.querySelectorAll('.area-suggest.show').forEach(x=>x.classList.remove('show'));activeSuggestIndex=-1;}
+function confirmArea(id){
+  const r=findRow(id);if(!r)return;
+  const input=document.querySelector(`tr[data-id="${id}"] .area-input`);
+  const value=input?input.value.trim():r.area.trim();
+  r.area=value;r.__areaConfirmed=!!value;if(!value)r.__selected=false;
+  closeSuggestions();render();
+}
+function findRow(id){return pendingRows.find(r=>r.__id===id);}
+
+/* ---------- Selection / bulk apply ---------- */
+function toggleRow(id,checked){const r=findRow(id);if(!r||rowStatus(r)!=='amber')return;r.__selected=checked;syncClasses();updateBulkbar();refreshStatsOnly();saveWorkspace();}
+function syncClasses(){pendingRows.forEach(r=>{const tr=document.querySelector(`tr[data-id="${r.__id}"]`);if(tr)tr.classList.toggle('selected',r.__selected);const cb=tr?.querySelector('input[type="checkbox"]');if(cb)cb.checked=r.__selected;});}
+function selectAllReady(){pendingRows.forEach(r=>{if(rowStatus(r)==='amber')r.__selected=true;});render();}
+function clearSelection(){pendingRows.forEach(r=>r.__selected=false);render();}
+function updateBulkbar(){
+  const selected=pendingRows.filter(r=>r.__selected);
+  const n=selected.length;
+  const usage=selected.reduce((sum,r)=>sum+(parseFloat(r.liters)||0),0);
+  const bar=document.getElementById('bulkbar');
+  if(n&&currentPage==='pending'){
+    bar.classList.add('show');document.getElementById('bulkCount').textContent=n+' selected · USAGE '+usage.toFixed(2)+' L';
+    const g={};selected.forEach(r=>{const k=(r.fuel_type||'?')+' @ '+(r.price!==''?fmtPrice(r.price):'no price');g[k]=(g[k]||0)+1;});
+    document.getElementById('bulkReportInfo').textContent='From report: '+Object.entries(g).map(([k,v])=>k+' × '+v).join(' · ');
+  } else bar.classList.remove('show');
+}
+
+function onBulkVoucherChange(){
+  const v=document.getElementById('bulkVoucher').value.trim();
+  const msg=document.getElementById('voucherAutofillMsg');
+  if(!v){ msg.textContent=''; saveWorkspace(); return; }
+  const existing=appliedRows.filter(r=>r.voucher===v);
+  if(existing.length){
+    const first=existing[0];
+    msg.textContent='↺ Voucher already has '+existing.length+' record'+(existing.length===1?'':'s')+' ('+(first.fuel_type||'fuel')+' @ Rs.'+(first.price||'—')+')';
+  } else msg.textContent='';
+  saveWorkspace();
+}
+
+/* ---------- Apply voucher ---------- */
+function applyVoucher(){
+  const voucher=document.getElementById('bulkVoucher').value.trim();
+  const selected=pendingRows.filter(r=>r.__selected);
+  if(!selected.length){alert('Select at least one ready transaction.');return;}
+  if(!voucher){alert('Voucher No is required.');return;}
+  const missing=selected.filter(r=>!r.fuel_type||isNaN(parseFloat(r.price)));
+  if(missing.length){
+    alert(missing.length+' selected row(s) have no Fuel Type / Price from the report (e.g. '+missing[0].vehicle+').\n\nApply the voucher, then use ✎ Edit on that record to enter them.');
+    // still allowed below only if user continues
+    if(!confirm('Apply them anyway (fuel type / price left blank)?')) return;
+  }
+  const combos=new Set(selected.map(r=>(r.fuel_type||'?')+' @ Rs.'+(parseFloat(r.price)||0).toFixed(2)));
+  const existing=appliedRows.find(r=>r.voucher===voucher);
+  const warn=[];
+  if(combos.size>1) warn.push('The selected rows use different fuel types / prices:\n  • '+[...combos].join('\n  • '));
+  if(existing){
+    const ek=(existing.fuel_type||'?')+' @ Rs.'+(parseFloat(existing.price)||0).toFixed(2);
+    if([...combos].some(c=>c!==ek)) warn.push('Voucher '+voucher+' already holds '+ek+', which differs from this selection.');
+  }
+  if(warn.length && !confirm(warn.join('\n\n')+'\n\nA voucher normally has ONE fuel type and price. Apply anyway?')) return;
+  const createdBy=document.getElementById('currentUser').value.trim()||'—';
+  const userId=document.getElementById('userId').value.trim()||'—';
+  const today=todayIso();
+  selected.forEach(r=>{
+    r.voucher=voucher;
+    calcTotal(r);
+    r.usage_id=userId;
+    r.shift=r.shift||determineShift(r.usage_date);
+    r.created_by=createdBy;
+    r.created_date=today;
+    computeMileage(r);
+    r.__selected=false;
+  });
+  pendingRows=pendingRows.filter(r=>!selected.includes(r));
+  appliedRows.push(...selected);
+  ensureSerials();
+  document.getElementById('bulkVoucher').value='';
+  document.getElementById('voucherAutofillMsg').textContent='';
+  render();showPage('applied');
+}
+
+/* ---------- Applied vouchers: filters ---------- */
+const MONTH_NAMES={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+const MONTH_LABEL=['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function parseDateParts(v){
+  const s=String(v||'').trim(); if(!s) return null;
+  let m=s.match(/^(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/); if(m) return {y:+m[1],mo:+m[2],d:+m[3]};
+  m=s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/); if(m){let y=+m[3]; if(y<100)y+=2000; return {y,mo:+m[2],d:+m[1]};}
+  m=s.match(/^(\d{1,2})[\s\-]([a-zA-Z]{3,})[\s\-]?(\d{2,4})?/);
+  if(m){const mo=MONTH_NAMES[m[2].slice(0,3).toLowerCase()]; if(mo){let y=m[3]?+m[3]:null; if(y&&y<100)y+=2000; return {y,mo,d:+m[1]};}}
+  m=s.match(/^(\d{1,2})$/); if(m) return {y:null,mo:null,d:+m[1]};
+  return null;
+}
+function dayKey(v){const p=parseDateParts(v); if(!p) return ''; return (p.y&&p.mo)?`${p.y}-${String(p.mo).padStart(2,'0')}-${String(p.d).padStart(2,'0')}`:`d${String(p.d).padStart(2,'0')}`;}
+function dayLabel(v){const p=parseDateParts(v); if(!p) return String(v||'—'); return p.mo?`${String(p.d).padStart(2,'0')} ${MONTH_LABEL[p.mo]}`:String(p.d).padStart(2,'0');}
+function daySortValue(v){const p=parseDateParts(v); if(!p) return 0; return (p.y||0)*10000+(p.mo||0)*100+(p.d||0);}
+function appliedDayKeys(){
+  const seen=new Map();
+  appliedRows.forEach(r=>{const k=dayKey(r.usage_date); if(k&&!seen.has(k))seen.set(k,r.usage_date);});
+  return [...seen.entries()].sort((a,b)=>daySortValue(a[1])-daySortValue(b[1])).map(e=>e[0]);
+}
+function allAppliedVouchers(){return uniqueSorted(appliedRows.map(r=>r.voucher||'—'));}
+function vouchersForDayKeys(dayKeys){
+  if(!dayKeys.size) return new Set(allAppliedVouchers());
+  return new Set(appliedRows.filter(r=>dayKeys.has(dayKey(r.usage_date))).map(r=>r.voucher||'—'));
+}
+function selectedVoucherRows(){
+  if(!appliedRows.length)return [];
+  const days=window.selectedAppliedDays, vouchers=window.selectedAppliedVouchers;
+  return appliedRows.filter(r=>(!days.size||days.has(dayKey(r.usage_date))) && (!vouchers.size||vouchers.has(r.voucher||'—')));
+}
+function renderApplied(){
+  if(!appliedRows.length){
+    document.getElementById('voucherGroupCount').textContent='0 vouchers';
+    document.getElementById('dateButtons').innerHTML='';
+    document.getElementById('voucherButtons').innerHTML='';
+    document.getElementById('appliedBody').innerHTML='<div class="empty-state">No applied vouchers yet.</div>';
+    return;
+  }
+  const dayKeys=appliedDayKeys();
+  window.selectedAppliedDays=new Set([...window.selectedAppliedDays].filter(k=>dayKeys.includes(k)));
+  const allVouchers=allAppliedVouchers();
+  window.selectedAppliedVouchers=new Set([...window.selectedAppliedVouchers].filter(v=>allVouchers.includes(v)));
+  const matchSet=vouchersForDayKeys(window.selectedAppliedDays);
+
+  const labelFor=k=>{const row=appliedRows.find(r=>dayKey(r.usage_date)===k); return row?dayLabel(row.usage_date):k;};
+  document.getElementById('dateButtons').innerHTML=dayKeys.map(k=>`<button class="filter-btn ${window.selectedAppliedDays.has(k)?'active':''}" onclick="toggleAppliedDay('${jsAttr(k)}')">${esc(labelFor(k))}</button>`).join('');
+  document.getElementById('voucherButtons').innerHTML=allVouchers.map(v=>{
+    const isActive=window.selectedAppliedVouchers.has(v), isMatch=matchSet.has(v);
+    const cls=isActive?'filter-btn active':(isMatch?'filter-btn match':'filter-btn nomatch');
+    return `<button class="${cls}" ${(isMatch||isActive)?'':'disabled'} title="${isMatch?'Used on a selected day':'Not used on the selected day(s)'}" onclick="toggleAppliedVoucher('${jsAttr(v)}')">${esc(v)}</button>`;
+  }).join('');
+  document.getElementById('dateFilterHint').textContent=window.selectedAppliedDays.size?window.selectedAppliedDays.size+' of '+dayKeys.length+' selected':'all '+dayKeys.length+' days';
+  document.getElementById('voucherFilterHint').textContent=window.selectedAppliedVouchers.size?window.selectedAppliedVouchers.size+' of '+allVouchers.length+' selected':matchSet.size+' of '+allVouchers.length+' match';
+  document.getElementById('voucherGroupCount').textContent=allVouchers.length+' vouchers';
+  renderSelectedVoucher();
+}
+function toggleAppliedDay(encoded){
+  const k=decodeURIComponent(encoded);
+  if(window.selectedAppliedDays.has(k)) window.selectedAppliedDays.delete(k); else window.selectedAppliedDays.add(k);
+  document.getElementById('appliedSearch').value='';renderApplied();saveWorkspace();
+}
+function toggleAppliedVoucher(encoded){
+  const v=decodeURIComponent(encoded);
+  const matchSet=vouchersForDayKeys(window.selectedAppliedDays);
+  if(!matchSet.has(v)&&!window.selectedAppliedVouchers.has(v))return;
+  if(window.selectedAppliedVouchers.has(v)) window.selectedAppliedVouchers.delete(v); else window.selectedAppliedVouchers.add(v);
+  document.getElementById('appliedSearch').value='';renderApplied();saveWorkspace();
+}
+function clearDayFilter(){window.selectedAppliedDays=new Set();renderApplied();saveWorkspace();}
+function clearVoucherFilter(){window.selectedAppliedVouchers=new Set();renderApplied();saveWorkspace();}
+
+/* ---------- Applied table with actions ---------- */
+function renderSelectedVoucher(){
+  if(!appliedRows.length)return;
+  const rowsForVoucher=selectedVoucherRows();
+  const query=(document.getElementById('appliedSearch')?.value||'').trim().toLowerCase();
+  const rows=rowsForVoucher.filter(r=>!query||APPLIED_COLS.map(c=>r[c.key]).some(v=>String(v??'').toLowerCase().includes(query)));
+  const totalLiters=rowsForVoucher.reduce((s,r)=>s+(parseFloat(r.liters)||0),0);
+  const totalCost=rowsForVoucher.reduce((s,r)=>s+(parseFloat(r.total_cost)||0),0);
+  const dayKeys=[...window.selectedAppliedDays], vouchers=[...window.selectedAppliedVouchers];
+  const dLabel=dayKeys.length?dayKeys.map(k=>{const row=appliedRows.find(r=>dayKey(r.usage_date)===k);return row?dayLabel(row.usage_date):k;}).join(', '):'All days';
+  const vLabel=vouchers.length?vouchers.join(', '):'All vouchers';
+
+  let html=`<div class="bill-print selected-voucher">
+    <div class="bill-print-head">
+      <div class="supplier">SAVED VOUCHER RECORD</div>
+      <div class="meta">Days: <b>${esc(dLabel)}</b> &nbsp; | &nbsp; Vouchers: <b>${esc(vLabel)}</b></div>
+      <div class="bill-title">FUEL ISSUE / PURCHASE DETAILS</div>
+    </div>`;
+  html+=`<div class="table-wrap"><table class="bill-like-table"><thead><tr>`;
+  APPLIED_COLS.forEach(c=>{
+    const isNum=['liters','price','total_cost','mileage'].includes(c.key);
+    html+=`<th class="${isNum?'num':''}">${esc(c.label)}</th>`;
+  });
+  html+=`<th>Actions</th>`;
+  html+=`</tr></thead><tbody>`;
+  rows.forEach(r=>{
+    html+='<tr>';
+    APPLIED_COLS.forEach(c=>{
+      const isNum=['liters','price','total_cost','mileage'].includes(c.key);
+      let cell;
+      if(c.key==='__serial') cell=esc(r.__serial??'');
+      else if(c.key==='shift') cell=r.shift?`<span class="badge ${r.shift==='DAY'?'day':'night'}">${esc(r.shift)}</span>`:'';
+      else if(c.key==='price') cell=esc(fmtPrice(r.price));
+      else if(c.key==='total_cost') cell=esc(fmtCost(r.total_cost));
+      else cell=esc(r[c.key]??'');
+      html+=`<td class="${isNum?'num':''}" data-mileage-for="${c.key==='mileage'?r.__id:''}">${cell}</td>`;
+    });
+    html+=`<td class="actions">
+      <button class="ghost row-action" onclick="editApplied('${r.__id}')" title="Edit Voucher / Price / Meter Readings / Shift">✎ Edit</button>
+      <button class="danger row-action" onclick="deleteApplied('${r.__id}')" title="Delete this record">✕ Delete</button>
+    </td>`;
+    html+='</tr>';
+  });
+  // Footer totals row
+  // Column layout: 16 APPLIED_COLS + Actions = 17
+  // serial(1) usage_id(2) vehicle(3) fuel(4) date(5) | liters(6) | shift(7) price(8) | cost(9)
+  // | mstart(10) mend(11) kms(12) | voucher(13) area(14) cDate(15) cBy(16) | actions(17)
+  html+=`</tbody><tfoot><tr>`;
+  html+=`<td colspan="5" style="text-align:right">TOTALS</td>`;  // 1-5
+  html+=`<td class="num">${fmt2(totalLiters)}</td>`;              // 6 (liters)
+  html+=`<td colspan="2"></td>`;                                   // 7-8 (shift, price)
+  html+=`<td class="num">${fmt2(totalCost)}</td>`;                 // 9 (total cost)
+  html+=`<td colspan="8"></td>`;                                   // 10-17 (meter start/end, kms, voucher, area, cDate, cBy, actions)
+  html+=`</tr></tfoot></table></div>
+    <div class="bill-print-total"><span>USAGE ${fmt2(totalLiters)} L</span><span>TOTAL Rs. ${fmt2(totalCost)}</span></div>
+    <div class="voucher-status-row"><span class="hint">${query?rows.length+' matching row'+(rows.length===1?'':'s')+' shown':rows.length+' row'+(rows.length===1?'':'s')+' shown for this filter'}</span>
+    <button class="review-btn" onclick="verifyVoucher('${jsAttr(dLabel)}','${jsAttr(vLabel)}')">✓ OK — Verify selection</button></div></div>`;
+  document.getElementById('appliedBody').innerHTML=html;
+}
+function verifyVoucher(dEncoded,vEncoded){
+  const d=decodeURIComponent(dEncoded),v=decodeURIComponent(vEncoded);
+  const key=`${d}||${v}`;
+  try{
+    const verified=JSON.parse(localStorage.getItem(STORAGE_KEY+'_verified')||'{}');
+    verified[key]=new Date().toISOString();
+    localStorage.setItem(STORAGE_KEY+'_verified',JSON.stringify(verified));
+    alert('Marked OK / verified for days: '+d+' — vouchers: '+v+'.');
+  }catch(e){}
+}
+
+/* ---------- Edit / Delete applied ---------- */
+function editApplied(id){
+  const r=appliedRows.find(x=>x.__id===id);
+  if(!r) return;
+  window.editingAppliedId=id;
+  document.getElementById('editVoucher').value=r.voucher||'';
+  document.getElementById('editFuelType').value=r.fuel_type||'';
+  document.getElementById('editShift').value=r.shift||'DAY';
+  document.getElementById('editPrice').value=r.price||'';
+  document.getElementById('editMeterStart').value=r.meter_start||'';
+  document.getElementById('editMeterEnd').value=r.meter_end||'';
+  updateEditMileage();
+  document.getElementById('editModal').classList.add('show');
+}
+function updateEditMileage(){
+  const s=parseFloat(document.getElementById('editMeterStart').value);
+  const e=parseFloat(document.getElementById('editMeterEnd').value);
+  const out=document.getElementById('editMileageOut');
+  out.textContent=(!isNaN(s)&&!isNaN(e))?(e-s).toFixed(2):'—';
+}
+function saveEditModal(){
+  const r=appliedRows.find(x=>x.__id===window.editingAppliedId);
+  if(!r){closeEditModal();return;}
+  r.voucher=document.getElementById('editVoucher').value.trim();
+  r.fuel_type=document.getElementById('editFuelType').value;
+  r.shift=document.getElementById('editShift').value;
+  r.price=document.getElementById('editPrice').value.trim();
+  r.meter_start=document.getElementById('editMeterStart').value.trim();
+  r.meter_end=document.getElementById('editMeterEnd').value.trim();
+  computeMileage(r);
+  calcTotal(r);
+  closeEditModal();
+  render();
+}
+function closeEditModal(){
+  window.editingAppliedId=null;
+  document.getElementById('editModal').classList.remove('show');
+}
+function deleteApplied(id){
+  const r=appliedRows.find(x=>x.__id===id);
+  if(!r) return;
+  if(!confirm('Delete this applied record permanently?\n\nVehicle: '+r.vehicle+'\nLiters: '+r.liters+'\nVoucher: '+r.voucher)) return;
+  appliedRows=appliedRows.filter(x=>x.__id!==id);
+  if(r.__seq && !appliedRows.concat(pendingRows).some(x=>x.__seq===r.__seq)) loadedSeqs.delete(r.__seq);
+  ensureSerials();
+  render();
+}
+
+/* ---------- Persistence ---------- */
+function saveWorkspace(){
+  try{
+    localStorage.setItem(STORAGE_KEY,JSON.stringify({
+      pendingRows,appliedRows,rowSeq,loadedSeqs:[...loadedSeqs],
+      selectedAppliedDays:[...window.selectedAppliedDays],
+      selectedAppliedVouchers:[...window.selectedAppliedVouchers],
+      currentUser:document.getElementById('currentUser')?.value||'',
+      userId:document.getElementById('userId')?.value||'9362',
+      bulkDraft:{}
+    }));
+  }catch(e){}
+}
+function loadWorkspace(){
+  try{
+    const raw=localStorage.getItem(STORAGE_KEY);if(!raw)return;
+    const d=JSON.parse(raw);
+    pendingRows=d.pendingRows||[];appliedRows=d.appliedRows||[];rowSeq=d.rowSeq||0;
+    loadedSeqs=new Set(d.loadedSeqs||[...pendingRows,...appliedRows].map(r=>r.__seq).filter(Boolean));
+    window.selectedAppliedDays=new Set(d.selectedAppliedDays||[]);
+    window.selectedAppliedVouchers=new Set(d.selectedAppliedVouchers||[]);
+    if(d.currentUser) document.getElementById('currentUser').value=d.currentUser;
+    if(d.userId) document.getElementById('userId').value=d.userId;
+    }catch(e){pendingRows=[];appliedRows=[];rowSeq=0;}
+}
+
+/* ---------- Print preview with editable meters + shift ---------- */
+function openPrintWindow(title,bodyHtml){
+  const w=window.open('','_blank');
+  if(!w){alert('Please allow pop-ups for this page so the print preview can be generated.');return;}
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${esc(title)}</title>
+  <style>
+    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;color:#1b2430;padding:22px;}
+    h1{font-size:15px;text-align:center;margin:0 0 3px;text-transform:uppercase;letter-spacing:.03em;}
+    .meta{text-align:center;font-size:11px;color:#555;margin-bottom:16px;}
+    h2{font-size:12.5px;margin:18px 0 6px;border-bottom:1px solid #999;padding-bottom:3px;}
+    table{width:100%;border-collapse:collapse;font-size:10px;margin-bottom:6px;}
+    th,td{border:1px solid #999;padding:4px 6px;text-align:left;word-break:break-word;}
+    th{background:#eee;}
+    td.num,th.num{text-align:right;}
+    tfoot td{font-weight:800;background:#f4f4f4;border-top:2px solid #333;}
+    .total-line{text-align:right;font-weight:700;font-size:12px;margin:6px 0 14px;}
+    .banner{background:#eaf1fb;border:1px solid #a8c4e4;padding:9px 12px;border-radius:4px;font-size:11px;margin-bottom:12px;color:#1b2430;}
+    .banner b{color:#3569a8;}
+    input.meter-input{font-family:inherit;font-size:11px;padding:3px 5px;border:1px solid #ccc;border-radius:3px;background:#fff;width:100px;text-align:right;}
+    select.shift-input{font-family:inherit;font-size:11px;padding:3px 5px;border:1px solid #ccc;border-radius:3px;background:#fff;}
+    .actions{text-align:center;margin:14px 0;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
+    .actions button{font-family:inherit;font-size:12px;font-weight:600;padding:8px 14px;border-radius:4px;border:1px solid transparent;cursor:pointer;background:#2c5f4f;color:#fff;}
+    .actions button.ghost{background:#fff;color:#1b2430;border-color:#bbb;}
+    .actions button:hover{opacity:.9;}
+    @media print{
+      .actions, .banner{display:none;}
+      input.meter-input{border:none;background:transparent;padding:0;text-align:right;}
+      select.shift-input{border:none;background:transparent;padding:0;appearance:none;-webkit-appearance:none;}
+      @page{margin:10mm;size:landscape;}
+    }
+  </style></head><body>${bodyHtml}
+  <script>
+    window.printNow=function(){window.focus();window.print();};
+    window.closeMe=function(){window.close();};
+    window.recalcMileage=function(inputEl,rowId){
+      var doc=inputEl.ownerDocument;
+      var sInput=doc.querySelector('[data-meter-row="'+rowId+'"][data-meter-field="meter_start"]');
+      var eInput=doc.querySelector('[data-meter-row="'+rowId+'"][data-meter-field="meter_end"]');
+      var out=doc.querySelector('[data-mileage-for="'+rowId+'"]');
+      if(!sInput||!eInput||!out) return;
+      var s=parseFloat(sInput.value), e=parseFloat(eInput.value);
+      if(!isNaN(s)&&!isNaN(e)) out.textContent=(e-s).toFixed(2);
+      else out.textContent='';
+    };
+    window.sendMeterUpdate=function(rowId,field,value,inputEl){
+      if(window.opener && window.opener.handlePrintMeterInput){
+        try{ window.opener.handlePrintMeterInput(rowId,field,value); }catch(e){}
+      }
+      window.recalcMileage(inputEl,rowId);
+    };
+    window.sendShiftUpdate=function(rowId,value){
+      if(window.opener && window.opener.handlePrintShiftInput){
+        try{ window.opener.handlePrintShiftInput(rowId,value); }catch(e){}
+      }
+    };
+    window.onload=function(){setTimeout(function(){window.focus();},100);};
+  <\/script>
+  </body></html>`);
+  w.document.close();
+}
+function appliedTableHtml(rows,editable){
+  const totalLiters=rows.reduce((s,r)=>s+(parseFloat(r.liters)||0),0);
+  const totalCost=rows.reduce((s,r)=>s+(parseFloat(r.total_cost)||0),0);
+  let html='<table><thead><tr>';
+  APPLIED_COLS.forEach(c=>{
+    const isNum=['liters','price','total_cost','mileage'].includes(c.key);
+    html+=`<th class="${isNum?'num':''}">${esc(c.label)}</th>`;
+  });
+  html+='</tr></thead><tbody>';
+  rows.forEach(r=>{
+    html+='<tr>';
+    APPLIED_COLS.forEach(c=>{
+      const isNum=['liters','price','total_cost','mileage'].includes(c.key);
+      if(editable && (c.key==='meter_start' || c.key==='meter_end')){
+        html+=`<td class="num"><input class="meter-input" type="text" value="${esc(r[c.key]||'')}" data-meter-row="${r.__id}" data-meter-field="${c.key}" oninput="window.sendMeterUpdate('${r.__id}','${c.key}',this.value,this)"></td>`;
+      } else if(editable && c.key==='shift'){
+        const cur=r.shift||'DAY';
+        html+=`<td><select class="shift-input" onchange="window.sendShiftUpdate('${r.__id}',this.value)"><option ${cur==='DAY'?'selected':''}>DAY</option><option ${cur==='NIGHT'?'selected':''}>NIGHT</option></select></td>`;
+      } else if(c.key==='mileage'){
+        html+=`<td class="num" data-mileage-for="${r.__id}">${esc(r.mileage??'')}</td>`;
+      } else if(c.key==='price'){
+        html+=`<td class="num">${esc(fmtPrice(r.price))}</td>`;
+      } else if(c.key==='total_cost'){
+        html+=`<td class="num">${esc(fmtCost(r.total_cost))}</td>`;
+      } else if(c.key==='__serial'){
+        html+=`<td>${esc(r.__serial??'')}</td>`;
+      } else {
+        html+=`<td class="${isNum?'num':''}">${esc(r[c.key]??'')}</td>`;
+      }
+    });
+    html+='</tr>';
+  });
+  // Totals row — 16 columns in this table (no Actions column)
+  // cols: serial(1) usage_id(2) vehicle(3) fuel(4) date(5) liters(6) shift(7) price(8)
+  //       cost(9) mstart(10) mend(11) kms(12) voucher(13) area(14) cDate(15) cBy(16)
+  html+='</tbody><tfoot><tr>';
+  html+=`<td colspan="5" style="text-align:right">TOTALS</td>`;  // 1-5
+  html+=`<td class="num">${fmt2(totalLiters)}</td>`;              // 6
+  html+=`<td colspan="2"></td>`;                                   // 7-8
+  html+=`<td class="num">${fmt2(totalCost)}</td>`;                 // 9
+  html+=`<td colspan="7"></td>`;                                   // 10-16
+  html+='</tr></tfoot></table>';
+  return html;
+}
+window.handlePrintMeterInput=function(id,field,value){
+  const r=appliedRows.find(x=>x.__id===id);
+  if(!r) return;
+  r[field]=value;
+  computeMileage(r);
+  saveWorkspace();
+  if(document.getElementById('appliedBody')) renderSelectedVoucher();
+};
+window.handlePrintShiftInput=function(id,value){
+  const r=appliedRows.find(x=>x.__id===id);
+  if(!r) return;
+  r.shift=value;
+  saveWorkspace();
+  if(document.getElementById('appliedBody')) renderSelectedVoucher();
+};
+function downloadSelectionPDF(){
+  if(!appliedRows.length){alert('No applied vouchers yet.');return;}
+  const rows=selectedVoucherRows();
+  const dayKeys=[...window.selectedAppliedDays],vouchers=[...window.selectedAppliedVouchers];
+  const dLabel=dayKeys.length?dayKeys.map(k=>{const row=appliedRows.find(r=>dayKey(r.usage_date)===k);return row?dayLabel(row.usage_date):k;}).join(', '):'All days';
+  const vLabel=vouchers.length?vouchers.join(', '):'All vouchers';
+  const totalLiters=rows.reduce((s,r)=>s+(parseFloat(r.liters)||0),0);
+  const totalCost=rows.reduce((s,r)=>s+(parseFloat(r.total_cost)||0),0);
+  let body=`<div class="banner"><b>Editable:</b> Meter Reading Start / End and SHIFT can be typed or selected directly in the table below. KMS recalculates automatically and syncs back. Then <b>Download PDF / Excel</b> or Print.</div>`;
+  body+=`<h1>Fuel Voucher Record</h1><div class="meta">Days: ${esc(dLabel)} &nbsp;|&nbsp; Vouchers: ${esc(vLabel)} &nbsp;|&nbsp; Generated ${esc(new Date().toLocaleString())}</div>`;
+  body+=appliedTableHtml(rows,true);
+  body+=`<div class="total-line">USAGE ${fmt2(totalLiters)} L &nbsp;&nbsp; TOTAL Rs. ${fmt2(totalCost)}</div>`;
+  body+=`<div class="actions"><button onclick="window.printNow()">🖨 Print</button><button onclick="window.opener&&window.opener.downloadAppliedPdf('selection')">⬇ Download PDF</button><button onclick="window.opener&&window.opener.downloadAppliedExcel('selection')">⬇ Download Excel</button><button class="ghost" onclick="window.closeMe()">Close</button></div>`;
+  openPrintWindow('Fuel Voucher Record',body);
+}
+function downloadFullPDF(){
+  if(!pendingRows.length&&!appliedRows.length){alert('No data loaded yet.');return;}
+  let body=`<div class="banner"><b>Editable:</b> Meter Reading Start / End and SHIFT can be typed or selected directly in the applied table below. KMS recalculates automatically. Then <b>Download PDF / Excel</b> or Print.</div>`;
+  body+=`<h1>Fuel Voucher — Complete Record</h1><div class="meta">Generated ${esc(new Date().toLocaleString())} &nbsp;|&nbsp; Applied: ${appliedRows.length} &nbsp;|&nbsp; Pending: ${pendingRows.length}</div>`;
+  if(appliedRows.length){
+    const totalLiters=appliedRows.reduce((s,r)=>s+(parseFloat(r.liters)||0),0);
+    const totalCost=appliedRows.reduce((s,r)=>s+(parseFloat(r.total_cost)||0),0);
+    body+='<h2>Applied / Voucher-Reconciled Transactions</h2>'+appliedTableHtml(appliedRows,true);
+    body+=`<div class="total-line">USAGE ${fmt2(totalLiters)} L &nbsp;&nbsp; TOTAL Rs. ${fmt2(totalCost)}</div>`;
+  }
+  if(pendingRows.length){
+    body+='<h2>Pending (Not Yet Applied to a Voucher)</h2>'+appliedTableHtml(pendingRows,false);
+  }
+  body+=`<div class="actions"><button onclick="window.printNow()">🖨 Print</button><button onclick="window.opener&&window.opener.downloadAppliedPdf('full')">⬇ Download PDF</button><button onclick="window.opener&&window.opener.downloadAppliedExcel('full')">⬇ Download Excel</button><button class="ghost" onclick="window.closeMe()">Close</button></div>`;
+  openPrintWindow('Fuel Voucher Complete Record',body);
+}
+
+/* ---------- Excel / PDF export (same columns, same borders as the print table) ---------- */
+const XL_NUM_KEYS=['__serial','liters','price','total_cost','meter_start','meter_end','mileage'];
+const XL_WIDTH={__serial:9,usage_id:11,vehicle:17,fuel_type:17,usage_date:18,liters:12,shift:9,price:14,total_cost:14,meter_start:14,meter_end:14,mileage:10,voucher:12,area:24,created_date:13,created_by:20};
+const PDF_WIDTH={__serial:10,usage_id:13,vehicle:20,fuel_type:18,usage_date:26,liters:15,shift:12,price:16,total_cost:19,meter_start:17,meter_end:17,mileage:13,voucher:14,area:22,created_date:19,created_by:18};
+function xlNumber(v){const n=parseFloat(String(v??'').replace(/,/g,''));return Number.isFinite(n)?n:null;}
+function buildAppliedWorkbook(ExcelJSLib,sheets){
+  const wb=new ExcelJSLib.Workbook();
+  wb.creator='Fuel Voucher Analysis Tool';wb.created=new Date();
+  const GREY='FF999999';
+  const border={top:{style:'thin',color:{argb:GREY}},left:{style:'thin',color:{argb:GREY}},bottom:{style:'thin',color:{argb:GREY}},right:{style:'thin',color:{argb:GREY}}};
+  sheets.forEach(sh=>{
+    const ws=wb.addWorksheet(sh.name,{views:[{state:'frozen',ySplit:1}]});
+    ws.columns=APPLIED_COLS.map(c=>({header:c.label,key:c.key,width:XL_WIDTH[c.key]||14}));
+    const hr=ws.getRow(1);hr.height=30;
+    hr.eachCell(cell=>{cell.font={bold:true,size:10,name:'Calibri'};cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFEEEEEE'}};cell.border=border;cell.alignment={vertical:'middle',horizontal:'center',wrapText:true};});
+    let tl=0,tc=0;
+    sh.rows.forEach((r,i)=>{
+      const row=ws.addRow({});
+      APPLIED_COLS.forEach((c,ci)=>{
+        const cell=row.getCell(ci+1);
+        let v;
+        if(c.key==='__serial') v=i+1;
+        else if(XL_NUM_KEYS.includes(c.key)) v=xlNumber(r[c.key]);
+        else v=r[c.key]??'';
+        cell.value=(v===null||v==='')?null:v;
+        cell.border=border;cell.font={size:10,name:'Calibri'};
+        const isNum=XL_NUM_KEYS.includes(c.key);
+        cell.alignment={vertical:'middle',horizontal:isNum?'right':(c.key==='shift'?'center':'left')};
+        if(c.key==='liters') cell.numFmt='#,##0.00#';
+        if(c.key==='price') cell.numFmt='"Rs."#,##0.00';
+        if(c.key==='total_cost') cell.numFmt='#,##0.00';
+        if(c.key==='mileage') cell.numFmt='#,##0.00';
+      });
+      tl+=parseFloat(r.liters)||0;tc+=parseFloat(r.total_cost)||0;
+    });
+    if(sh.totals!==false){
+      const row=ws.addRow({});const n=row.number;
+      ws.mergeCells(n,1,n,5);
+      row.getCell(1).value='TOTALS';
+      row.getCell(6).value=Math.round(tl*1000)/1000;row.getCell(6).numFmt='#,##0.00';
+      row.getCell(9).value=Math.round(tc*100)/100;row.getCell(9).numFmt='#,##0.00';
+      for(let ci=1;ci<=APPLIED_COLS.length;ci++){
+        const cell=row.getCell(ci);
+        cell.font={bold:true,size:10,name:'Calibri'};
+        cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFF4F4F4'}};
+        cell.border={...border,top:{style:'medium',color:{argb:'FF333333'}}};
+        cell.alignment={vertical:'middle',horizontal:ci===1||ci===6||ci===9?'right':'left'};
+      }
+    }
+  });
+  return wb;
+}
+function buildAppliedPdf(jsPDFCtor,runAutoTable,opt){
+  const doc=new jsPDFCtor({orientation:'landscape',unit:'mm',format:'a4'});
+  const W=doc.internal.pageSize.getWidth();
+  const fmt=n=>(parseFloat(n)||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const labels=APPLIED_COLS.map(c=>c.label);
+  const cellText=(r,c,i)=>{
+    if(c.key==='__serial') return String(i+1);
+    if(c.key==='liters') return (parseFloat(r.liters)||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:3});
+    if(c.key==='price') return r.price===''||r.price==null?'':fmtPrice(r.price);
+    if(c.key==='total_cost') return fmtCost(r.total_cost);
+    return String(r[c.key]??'');
+  };
+  const numIdx={};APPLIED_COLS.forEach((c,i)=>{if(XL_NUM_KEYS.includes(c.key)) numIdx[i]=true;});
+  const columnStyles={};
+  APPLIED_COLS.forEach((c,i)=>{columnStyles[i]={cellWidth:PDF_WIDTH[c.key]||16,halign:numIdx[i]?'right':(c.key==='shift'?'center':'left')};});
+  const LINE=[153,153,153];
+  let y=12;
+  doc.setFont('helvetica','bold');doc.setFontSize(13);doc.text(opt.title,W/2,y,{align:'center'});
+  doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(85);
+  doc.text(opt.meta,W/2,y+5,{align:'center'});doc.setTextColor(0);
+  y+=9;
+  const tables=[{heading:null,rows:opt.rows,totals:true}];
+  if(opt.pending&&opt.pending.length) tables.push({heading:'Pending (Not Yet Applied to a Voucher)',rows:opt.pending,totals:false});
+  tables.forEach((t,ti)=>{
+    if(t.heading){doc.setFont('helvetica','bold');doc.setFontSize(10);doc.text(t.heading,8,y+4);y+=7;}
+    const tl=t.rows.reduce((s,r)=>s+(parseFloat(r.liters)||0),0),tc=t.rows.reduce((s,r)=>s+(parseFloat(r.total_cost)||0),0);
+    const foot=t.totals?[[{content:'TOTALS',colSpan:5,styles:{halign:'right'}},{content:fmt(tl),styles:{halign:'right'}},{content:'',colSpan:2},{content:fmt(tc),styles:{halign:'right'}},{content:'',colSpan:7}]]:undefined;
+    runAutoTable(doc,{
+      startY:y,head:[labels],body:t.rows.map((r,i)=>APPLIED_COLS.map((c)=>cellText(r,c,i))),foot,
+      theme:'grid',showHead:'everyPage',showFoot:'lastPage',margin:{left:8,right:8,top:12,bottom:12},
+      styles:{font:'helvetica',fontSize:6.5,cellPadding:1.3,lineColor:LINE,lineWidth:0.15,textColor:[27,36,48],overflow:'linebreak',valign:'middle'},
+      headStyles:{fillColor:[238,238,238],textColor:[20,20,20],fontStyle:'bold',halign:'center',lineColor:LINE,lineWidth:0.15},
+      footStyles:{fillColor:[244,244,244],textColor:[20,20,20],fontStyle:'bold',lineColor:[51,51,51],lineWidth:0.2},
+      columnStyles,rowPageBreak:'avoid'
+    });
+    y=doc.lastAutoTable.finalY+5;
+    if(t.totals){
+      doc.setFont('helvetica','bold');doc.setFontSize(9.5);doc.setTextColor(0);
+      doc.text('USAGE '+fmt(tl)+' L     TOTAL Rs. '+fmt(tc),W-8,y,{align:'right'});y+=8;
+    }
+  });
+  const n=doc.getNumberOfPages();
+  for(let i=1;i<=n;i++){doc.setPage(i);doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(110);
+    doc.text('Page '+i+' of '+n,W-8,doc.internal.pageSize.getHeight()-5,{align:'right'});}
+  return doc;
+}
+
+/* ---------- Download Excel / PDF ---------- */
+const EXCELJS_URL='https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js';
+const JSPDF_URL='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+const AUTOTABLE_URL='https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js';
+function loadScriptOnce(url,isReady){
+  return new Promise((resolve,reject)=>{
+    if(isReady()) return resolve();
+    const s=document.createElement('script');s.src=url;
+    s.onload=()=>isReady()?resolve():reject(new Error('library did not initialise'));
+    s.onerror=()=>reject(new Error('could not load '+url.split('/').slice(-1)[0]+' — check your internet connection'));
+    document.head.appendChild(s);
+  });
+}
+function saveBlob(blob,name){
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1500);
+}
+function selectionLabels(){
+  const dayKeys=[...window.selectedAppliedDays],vouchers=[...window.selectedAppliedVouchers];
+  const dLabel=dayKeys.length?dayKeys.map(k=>{const row=appliedRows.find(r=>dayKey(r.usage_date)===k);return row?dayLabel(row.usage_date):k;}).join(', '):'All days';
+  const vLabel=vouchers.length?vouchers.join(', '):'All vouchers';
+  return {dLabel,vLabel};
+}
+function exportContext(scope){
+  const {dLabel,vLabel}=selectionLabels();
+  const stamp=todayIso();
+  const safe=s=>String(s).replace(/[^A-Za-z0-9._-]+/g,'_').replace(/^_+|_+$/g,'').slice(0,60)||'All';
+  if(scope==='selection'){
+    return {rows:selectedVoucherRows(),pending:[],title:'Fuel Voucher Record',
+      meta:'Days: '+dLabel+'   |   Vouchers: '+vLabel+'   |   Generated '+new Date().toLocaleString(),
+      base:'Fuel_Voucher_'+safe(vLabel==='All vouchers'?'All':vLabel)+'_'+stamp};
+  }
+  return {rows:appliedRows,pending:pendingRows,title:'Fuel Voucher — Complete Record',
+    meta:'Generated '+new Date().toLocaleString()+'   |   Applied: '+appliedRows.length+'   |   Pending: '+pendingRows.length,
+    base:'Fuel_Voucher_Complete_'+stamp};
+}
+async function downloadAppliedExcel(scope){
+  const ctx=exportContext(scope);
+  if(!ctx.rows.length){alert('There are no applied records to export for this selection.');return;}
+  const sheets=[{name:scope==='selection'?'Fuel Voucher':'Applied',rows:ctx.rows}];
+  if(ctx.pending.length) sheets.push({name:'Pending',rows:ctx.pending,totals:false});
+  try{
+    await loadScriptOnce(EXCELJS_URL,()=>!!window.ExcelJS);
+    const wb=buildAppliedWorkbook(window.ExcelJS,sheets);
+    const buf=await wb.xlsx.writeBuffer();
+    saveBlob(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),ctx.base+'.xlsx');
+  }catch(e){
+    // offline fallback: bordered HTML table that Excel opens as a sheet
+    if(!confirm('The Excel library could not be loaded ('+e.message+').\n\nDownload a basic bordered .xls instead?')) return;
+    let h='<html><head><meta charset="utf-8"></head><body><table border="1" style="border-collapse:collapse"><tr>'+APPLIED_COLS.map(c=>'<th style="background:#eee">'+esc(c.label)+'</th>').join('')+'</tr>';
+    ctx.rows.forEach((r,i)=>{h+='<tr>'+APPLIED_COLS.map(c=>'<td>'+esc(c.key==='__serial'?i+1:(r[c.key]??''))+'</td>').join('')+'</tr>';});
+    h+='</table></body></html>';
+    saveBlob(new Blob([h],{type:'application/vnd.ms-excel'}),ctx.base+'.xls');
+  }
+}
+async function downloadAppliedPdf(scope){
+  const ctx=exportContext(scope);
+  if(!ctx.rows.length){alert('There are no applied records to export for this selection.');return;}
+  try{
+    await loadScriptOnce(JSPDF_URL,()=>!!(window.jspdf&&window.jspdf.jsPDF));
+    await loadScriptOnce(AUTOTABLE_URL,()=>!!(window.jspdf&&window.jspdf.jsPDF.API.autoTable));
+    const doc=buildAppliedPdf(window.jspdf.jsPDF,(d,o)=>d.autoTable(o),ctx);
+    doc.save(ctx.base+'.pdf');
+  }catch(e){alert('Could not create the PDF: '+e.message);}
+}
+
+/* ---------- CSV ---------- */
+function allRows(){return [...pendingRows,...appliedRows];}
+function downloadCSV(){
+  const header=CSV_COLS.map(c=>c.label).join(',');
+  const escCsv=v=>{v=(v??'').toString();return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+  const body=allRows().map(r=>CSV_COLS.map(c=>escCsv(r[c.key])).join(',')).join('\n');
+  const blob=new Blob([header+'\n'+body],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download='fuel_transactions_analysis.csv';a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),500);
+}
+function clearWorkspace(){
+  if(!pendingRows.length&&!appliedRows.length)return;
+  if(!confirm('Clear all pending and applied transactions from this page?'))return;
+  pendingRows=[];appliedRows=[];loadedSeqs=new Set();
+  document.getElementById('uploadSummary').innerHTML='';
+  localStorage.removeItem(STORAGE_KEY);render();
+}
+
+loadAreaList();
+loadWorkspace();
+renderAreaList();
+render();
+showPage(pendingRows.length?'pending':appliedRows.length?'applied':'upload');
+</script>
+</body>
+</html>
